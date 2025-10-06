@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cross Road</title>
+    <link rel="stylesheet" href="./crossRoad.css" />
+  </head>
+  <body>
+    <canvas class="game"></canvas>
+    <div id="controls">
+      <div>
+        <button id="forward">▲</button>
+        <button id="left">◀</button>
+        <button id="backward">▼</button>
+        <button id="right">▶</button>
+      </div>
+    </div>
+    <div id="score">0</div>
+    <div id="result-container">
+      <div id="result">
+        <h1>Game Over</h1>
+        <p>Your score: <span id="final-score"></span></p>
+        <button id="retry">Retry</button>
+      </div>
+    </div>
+    <script type="module" src="src/crossRoad.js"></script>
+  </body>
+  </html>
