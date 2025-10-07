@@ -3,12 +3,28 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CharacterControls } from './characterControls.js';
 
+// Load saved game state (from main scene)
+const savedState = JSON.parse(localStorage.getItem('gameState') || '{}');
+let reportsCollected = savedState.reportsCollected || 0;
+let totalReports = savedState.totalReports || 3;
+let timeMsLeft = savedState.timeMsLeft || 120000;
+let gamePaused = false;
+let gameEnded = false;
+let allReportsAnnounced = false;
+let introCamAnimating = false;
+let introCamT = 0;
+const introCamDuration = 1.2; // seconds
+let introStartEye = new THREE.Vector3();
+let introStartTarget = new THREE.Vector3();
+let introEndEye = new THREE.Vector3();
+let introEndTarget = new THREE.Vector3();
+
 // ------------------- Scene & Camera -------------------
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
-camera.position.set(0, 6, 12);
+camera.position.set(0, 3.5, 7);
 camera.lookAt(0, 1, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -16,6 +32,133 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
+
+// HUD with pause/play
+const hud = document.createElement('div');
+hud.style.position = 'fixed';
+hud.style.top = '20px';
+hud.style.left = '20px';
+hud.style.padding = '10px 12px';
+hud.style.background = 'rgba(0,0,0,0.5)';
+hud.style.color = '#fff';
+hud.style.fontFamily = 'sans-serif';
+hud.style.fontSize = '14px';
+hud.style.borderRadius = '6px';
+hud.style.zIndex = '9999';
+hud.style.display = 'flex';
+hud.style.flexDirection = 'column';
+hud.style.gap = '8px';
+
+const hudText = document.createElement('div');
+hudText.textContent = '';
+
+const controlsRow = document.createElement('div');
+controlsRow.style.display = 'flex';
+controlsRow.style.gap = '8px';
+
+const playBtn = document.createElement('button');
+playBtn.textContent = 'Play';
+playBtn.style.cursor = 'pointer';
+playBtn.style.padding = '6px 10px';
+playBtn.style.border = 'none';
+playBtn.style.borderRadius = '4px';
+playBtn.style.background = '#00a86b';
+playBtn.style.color = '#fff';
+playBtn.addEventListener('click', () => {
+  if (gameEnded) return;
+  gamePaused = false;
+});
+
+const pauseBtn = document.createElement('button');
+pauseBtn.textContent = 'Pause';
+pauseBtn.style.cursor = 'pointer';
+pauseBtn.style.padding = '6px 10px';
+pauseBtn.style.border = 'none';
+pauseBtn.style.borderRadius = '4px';
+pauseBtn.style.background = '#cc3333';
+pauseBtn.style.color = '#fff';
+pauseBtn.addEventListener('click', () => {
+  gamePaused = true;
+});
+
+controlsRow.appendChild(playBtn);
+controlsRow.appendChild(pauseBtn);
+
+hud.appendChild(hudText);
+hud.appendChild(controlsRow);
+document.body.appendChild(hud);
+
+// Arrival overlay (full-screen) to introduce the challenge
+gamePaused = true;
+(function setupArrivalOverlay() {
+  const overlay = document.createElement('div');
+  overlay.style.position = 'fixed';
+  overlay.style.inset = '0';
+  overlay.style.display = 'flex';
+  overlay.style.flexDirection = 'column';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.background = 'rgba(0,0,0,0.7)';
+  overlay.style.color = '#fff';
+  overlay.style.fontFamily = 'sans-serif';
+  overlay.style.textAlign = 'center';
+  overlay.style.padding = '24px';
+  overlay.style.zIndex = '10000';
+
+  const text = document.createElement('div');
+  text.style.maxWidth = '720px';
+  text.style.lineHeight = '1.6';
+  text.style.fontSize = '18px';
+  text.style.marginBottom = '16px';
+  text.textContent = "Oh no, you'll have to go throught the cars  before you can proceed.";
+
+  const btn = document.createElement('button');
+  btn.textContent = 'CONTINUE';
+  btn.style.cursor = 'pointer';
+  btn.style.padding = '10px 18px';
+  btn.style.fontSize = '16px';
+  btn.style.border = 'none';
+  btn.style.borderRadius = '6px';
+  btn.style.background = '#00a86b';
+  btn.style.color = '#fff';
+  btn.addEventListener('click', () => {
+    gamePaused = false;
+    // Prepare camera intro animation from current view to a spot behind character along +X
+    introCamAnimating = true;
+    introCamT = 0;
+    introStartEye.copy(camera.position);
+    introStartTarget.copy(controls.target);
+    const base = playerModel ? playerModel.position : new THREE.Vector3();
+    // End eye: to the right side (negative X behind if moving +Z), tweak as needed
+    introEndEye.set(base.x - 7, (playerModel ? playerModel.position.y : 0) + 3.5, base.z);
+    introEndTarget.set(base.x, (playerModel ? playerModel.position.y : 0) + 1, base.z);
+    overlay.remove();
+  });
+
+  overlay.appendChild(text);
+  overlay.appendChild(btn);
+  document.body.appendChild(overlay);
+})();
+
+function formatTime(ms) {
+  const totalSec = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
+  const s = (totalSec % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function updateHud() {
+  hudText.textContent = `Reports: ${reportsCollected}/${totalReports} | Time: ${formatTime(timeMsLeft)}`;
+  if (!allReportsAnnounced && reportsCollected >= totalReports) {
+    allReportsAnnounced = true;
+    const tip = document.createElement('div');
+    tip.textContent = 'All reports collected! Go through the portal.';
+    tip.style.marginTop = '4px';
+    tip.style.opacity = '0.9';
+    hud.appendChild(tip);
+  }
+}
+updateHud();
 
 // ------------------- Lights -------------------
 scene.add(new THREE.AmbientLight(0xffffff, 0.6));
@@ -42,6 +185,31 @@ const ground = new THREE.Mesh(
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
+
+// Axis guidelines (red) and standard axes helper
+function addAxisGuides() {
+  const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+  const makeLine = (a, b) => {
+    const geom = new THREE.BufferGeometry().setFromPoints([a, b]);
+    const line = new THREE.Line(geom, material);
+    line.renderOrder = 1;
+    return line;
+  };
+  const L = 200;
+  // X axis guideline (red)
+  scene.add(makeLine(new THREE.Vector3(-L, 0, 0), new THREE.Vector3(L, 0, 0)));
+  // Y axis guideline (red)
+  scene.add(makeLine(new THREE.Vector3(0, -L, 0), new THREE.Vector3(0, L, 0)));
+  // Z axis guideline (red)
+  scene.add(makeLine(new THREE.Vector3(0, 0, -L), new THREE.Vector3(0, 0, L)));
+
+  // Also add a small axes helper for orientation (X=red, Y=green, Z=blue)
+  const axes = new THREE.AxesHelper(5);
+  axes.position.set(0, 0.01, 0);
+  axes.renderOrder = 2;
+  scene.add(axes);
+}
+addAxisGuides();
 
 // ------------------- Controls -------------------
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -74,8 +242,8 @@ function focusCameraOnPlayer() {
   if (!playerModel) return;
   const eye = new THREE.Vector3(
     playerModel.position.x,
-    playerModel.position.y + 6,
-    playerModel.position.z + 12
+    playerModel.position.y + 3.5,
+    playerModel.position.z + 7
   );
   const tgt = new THREE.Vector3(
     playerModel.position.x,
@@ -120,8 +288,13 @@ function buildLanes() {
     if (!template) return;
 
     const vehicles = [];
-    for (let i = 0; i < spec.count; i++) {
-      const z = spec.startZ + (spec.dir > 0 ? i * spec.spacing : -i * spec.spacing);
+    // If count is 0 or not specified, compute number of cars to keep lane dense
+    const laneLength = Math.max(1, Math.abs(spec.maxZ - spec.minZ));
+    const spacing = Math.max(4, spec.spacing || 10);
+    const computedCount = Math.max(3, Math.floor(laneLength / spacing));
+    const count = spec.count && spec.count > 0 ? spec.count : computedCount;
+    for (let i = 0; i < count; i++) {
+      const z = spec.startZ + (spec.dir > 0 ? i * spacing : -i * spacing);
       const mesh = cloneVehicle(template, spec.x, z);
       if (mesh) vehicles.push({ mesh, speed: spec.speed, dir: spec.dir });
     }
@@ -147,12 +320,12 @@ loader.load(
     };
 
     // ✅ Automatically find car1–car6 meshes
-    const carNames = ['car1', 'car2', 'car3', 'car4', 'car5', 'car6'];
-    carTemplates = [];
+        carTemplates = [];
 
     env.traverse((obj) => {
       const n = (obj.name || '').toLowerCase();
-      if (carNames.includes(n)) {
+      // Match cube016, cube017, ..., cube026
+      if (/^cube0(1[6-9]|2[0-6])$/.test(n)) {
         carTemplates.push(obj);
       }
     });
@@ -162,7 +335,7 @@ loader.load(
     } else {
       console.log(`✅ Found ${carTemplates.length} car templates:`, carTemplates.map(o => o.name));
       carTemplates.forEach(t => (t.visible = false)); // hide originals
-      // Configure lanes from Cube008 and Cube009
+      // Configure lanes from Cube008 and Cube009 (each road will have 2 sub-lanes)
       const laneNames = ['cube008', 'cube009'];
       const foundLanes = [];
       laneNames.forEach((lname) => {
@@ -175,7 +348,11 @@ loader.load(
           box.getCenter(center);
           const minZ = Math.min(box.min.z, box.max.z);
           const maxZ = Math.max(box.min.z, box.max.z);
-          foundLanes.push({ x: center.x, minZ, maxZ });
+          const laneWidthX = Math.abs(box.max.x - box.min.x);
+          // Two sub-lanes inside the road width (quarter offsets to keep within boundaries)
+          const xLeft = center.x - laneWidthX * 0.25;
+          const xRight = center.x + laneWidthX * 0.25;
+          foundLanes.push({ x: center.x, minZ, maxZ, xLeft, xRight });
         }
       });
 
@@ -197,22 +374,41 @@ loader.load(
 
       if (foundLanes.length === 0) {
         console.warn('⚠️ Cube008/Cube009 not found. Using fallback lane positions.');
+        // 2 roads × 2 sub-lanes fallback
         laneSpecs = [
-          { x: -4.0, speed: 9.0, dir: 1, count: 3, spacing: 18, startZ: -60, minZ: -60, maxZ: 60 },
-          { x:  4.0, speed: 10.0, dir: -1, count: 2, spacing: 24, startZ:  60, minZ: -60, maxZ: 60 },
+          { x: -4.0, speed: 9.0,  dir:  1, count: 3, spacing: 18, startZ: -60, minZ: -60, maxZ: 60 },
+          { x: -2.0, speed: 12.0, dir: -1, count: 2, spacing: 22, startZ:  60, minZ: -60, maxZ: 60 },
+          { x:  2.0, speed: 10.0, dir:  1, count: 2, spacing: 20, startZ: -60, minZ: -60, maxZ: 60 },
+          { x:  4.0, speed: 13.0, dir: -1, count: 3, spacing: 18, startZ:  60, minZ: -60, maxZ: 60 },
         ];
       } else {
-        // Build two lane specs based on found lanes (upwards and downwards flows)
-        laneSpecs = foundLanes.slice(0, 2).map((lane, idx) => ({
-          x: lane.x,
-          speed: idx === 0 ? 9.0 : 12.0,
-          dir: idx === 0 ? 1 : -1,
-          count: idx === 0 ? 3 : 2,
-          spacing: idx === 0 ? 18 : 22,
-          startZ: idx === 0 ? lane.minZ : lane.maxZ,
-          minZ: lane.minZ,
-          maxZ: lane.maxZ,
-        }));
+        // For each road, create two sub-lanes with alternating directions
+        laneSpecs = [];
+        foundLanes.slice(0, 2).forEach((lane) => {
+          const denseSpacing = 10; // tighter spacing to keep lanes occupied
+          // Left sub-lane (forward)
+          laneSpecs.push({
+            x: lane.xLeft,
+            speed: 8.0,
+            dir: 1,
+            count: 0, // derive in buildLanes
+            spacing: denseSpacing,
+            startZ: lane.minZ,
+            minZ: lane.minZ,
+            maxZ: lane.maxZ,
+          });
+          // Right sub-lane (backward)
+          laneSpecs.push({
+            x: lane.xRight,
+            speed: 8.0,
+            dir: -1,
+            count: 0, // derive in buildLanes
+            spacing: denseSpacing,
+            startZ: lane.maxZ,
+            minZ: lane.minZ,
+            maxZ: lane.maxZ,
+          });
+        });
       }
 
       buildLanes();
@@ -269,8 +465,17 @@ renderer.setAnimationLoop(() => {
   const dt = clock.getDelta();
 
   // Update character
-  if (characterControls) characterControls.update(dt, keysPressed);
+  if (characterControls && !gameEnded && !gamePaused) characterControls.update(dt, keysPressed);
   else controls.update();
+
+  // Intro camera animation (lerp from current to behind-the-character view)
+  if (introCamAnimating) {
+    introCamT += dt / introCamDuration;
+    const t = Math.min(1, introCamT);
+    camera.position.lerpVectors(introStartEye, introEndEye, t);
+    controls.target.lerpVectors(introStartTarget, introEndTarget, t);
+    if (t >= 1) introCamAnimating = false;
+  }
 
   // Clamp player within environment bounds
   if (playerModel && worldBounds) {
@@ -281,14 +486,25 @@ renderer.setAnimationLoop(() => {
     playerModel.position.z = pz;
   }
 
-  // Move vehicles
-  lanes.forEach((lane) => {
-    lane.vehicles.forEach((v) => {
-      v.mesh.position.z += v.speed * dt * v.dir;
-      if (v.dir > 0 && v.mesh.position.z > lane.maxZ) v.mesh.position.z = lane.minZ;
-      if (v.dir < 0 && v.mesh.position.z < lane.minZ) v.mesh.position.z = lane.maxZ;
+  // Clamp camera/viewport horizontally within environment bounds
+  if (worldBounds) {
+    const padCam = 0.5;
+    const minX = worldBounds.minX + padCam;
+    const maxX = worldBounds.maxX - padCam;
+    controls.target.x = THREE.MathUtils.clamp(controls.target.x, minX, maxX);
+    camera.position.x = THREE.MathUtils.clamp(camera.position.x, minX, maxX);
+  }
+
+  // Move vehicles (halt when paused or ended)
+  if (!gameEnded && !gamePaused) {
+    lanes.forEach((lane) => {
+      lane.vehicles.forEach((v) => {
+        v.mesh.position.z += v.speed * dt * v.dir;
+        if (v.dir > 0 && v.mesh.position.z > lane.maxZ) v.mesh.position.z = lane.minZ;
+        if (v.dir < 0 && v.mesh.position.z < lane.minZ) v.mesh.position.z = lane.maxZ;
+      });
     });
-  });
+  }
 
   // Simple collision detection
   if (playerModel) {
@@ -310,6 +526,17 @@ renderer.setAnimationLoop(() => {
         break;
       }
     }
+  }
+
+  // Update and persist timer
+  if (!gameEnded && !gamePaused) {
+    timeMsLeft -= dt * 1000;
+    if (timeMsLeft <= 0) {
+      timeMsLeft = 0;
+      gameEnded = true;
+    }
+    updateHud();
+    localStorage.setItem('gameState', JSON.stringify({ reportsCollected, totalReports, timeMsLeft }));
   }
 
   renderer.render(scene, camera);

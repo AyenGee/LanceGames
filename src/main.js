@@ -120,6 +120,7 @@ const paperBoxes = [];
 const papers = [];
 let reportsCollected = 0;
 const totalReports = 3;
+let allReportsAnnounced = false;
 
 // HUD for reports count + timer
 let hudEl = null;
@@ -305,6 +306,10 @@ function checkCollisions(character) {
             p.geometry.dispose();
             p.material.dispose();
             papers[i] = null;
+            if (!allReportsAnnounced && reportsCollected >= totalReports) {
+                allReportsAnnounced = true;
+                showMessage('All reports collected! Go through the portal.');
+            }
         }
     }
 
@@ -313,6 +318,14 @@ function checkCollisions(character) {
 
 // === Teleport Function ===
 function teleportToMiniChallenge() {
+    // Persist game HUD/state for next scene
+    const state = {
+        reportsCollected,
+        totalReports,
+        timeMsLeft,
+    };
+    localStorage.setItem("gameState", JSON.stringify(state));
+
     window.location.href = "http://localhost:5173/carcross.html";
 }
 
