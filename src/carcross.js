@@ -8,8 +8,8 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
-camera.position.set(0, 20, 40);
-camera.lookAt(0, 0, 0);
+camera.position.set(0, 6, 12);
+camera.lookAt(0, 1, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(innerWidth, innerHeight);
@@ -47,22 +47,18 @@ scene.add(ground);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.06;
-controls.target.set(0, 0, 0);
+controls.target.set(0, 1, 0);
 
 // ------------------- Loaders -------------------
 const loader = new GLTFLoader();
 
 // Vehicle templates
-let carTemplate1 = null;
-let carTemplate2 = null;
+let carTemplates = [];
 
-// Lanes
-const laneSpecs = [
-  { x: -4.0, speed: 6.0, dir: 1, template: 'car1', count: 3, spacing: 18, startZ: -60 },
-  { x:  0.0, speed: 8.0, dir: -1, template: 'car2', count: 2, spacing: 22, startZ:  60 },
-  { x:  4.0, speed: 7.0, dir: 1, template: 'car1', count: 2, spacing: 24, startZ: -60 },
-];
+// Lanes (will be configured from Cube008/Cube009 after environment loads)
+let laneSpecs = [];
 const lanes = [];
+let worldBounds = null; // { minX, maxX, minZ, maxZ }
 
 // ------------------- Helper Functions -------------------
 function setShadowFlags(object3d) {
@@ -72,6 +68,22 @@ function setShadowFlags(object3d) {
       obj.receiveShadow = true;
     }
   });
+}
+
+function focusCameraOnPlayer() {
+  if (!playerModel) return;
+  const eye = new THREE.Vector3(
+    playerModel.position.x,
+    playerModel.position.y + 6,
+    playerModel.position.z + 12
+  );
+  const tgt = new THREE.Vector3(
+    playerModel.position.x,
+    playerModel.position.y + 1,
+    playerModel.position.z
+  );
+  camera.position.copy(eye);
+  controls.target.copy(tgt);
 }
 
 function findByNameDeep(root, nameLower) {
@@ -86,26 +98,25 @@ function findByNameDeep(root, nameLower) {
 
 function cloneVehicle(template, x, z) {
   if (!template) return null;
-  let clone;
-  if (template.isMesh) {
-    clone = template.clone(true);
-  } else {
-    // if group, clone the first mesh child
-    const mesh = template.getObjectByProperty('type', 'Mesh');
-    clone = mesh ? mesh.clone(true) : template.clone(true);
-  }
+  const clone = template.clone(true);
   setShadowFlags(clone);
+  clone.traverse((obj) => { obj.visible = true; obj.frustumCulled = false; });
   clone.position.set(x, 0, z);
+  // Ensure it sits on ground: lift so its bbox min.y touches y=0
+  clone.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(clone);
+  if (isFinite(box.min.y)) {
+    const lift = -box.min.y + 0.01;
+    clone.position.y += lift;
+  }
   scene.add(clone);
   return clone;
 }
 
 function buildLanes() {
-  const minZ = -60;
-  const maxZ = 60;
-
   laneSpecs.forEach((spec) => {
-    const template = spec.template === 'car1' ? carTemplate1 : carTemplate2;
+    if (carTemplates.length === 0) return;
+    const template = carTemplates[Math.floor(Math.random() * carTemplates.length)];
     if (!template) return;
 
     const vehicles = [];
@@ -114,7 +125,7 @@ function buildLanes() {
       const mesh = cloneVehicle(template, spec.x, z);
       if (mesh) vehicles.push({ mesh, speed: spec.speed, dir: spec.dir });
     }
-    lanes.push({ x: spec.x, vehicles, minZ, maxZ });
+    lanes.push({ x: spec.x, vehicles, minZ: spec.minZ, maxZ: spec.maxZ });
   });
 }
 
@@ -126,18 +137,86 @@ loader.load(
     setShadowFlags(env);
     scene.add(env);
 
-    // Find car templates
-    carTemplate1 = findByNameDeep(env, 'car1');
-    carTemplate2 = findByNameDeep(env, 'car2');
+    // Compute world bounds from the environment
+    const envBox = new THREE.Box3().setFromObject(env);
+    worldBounds = {
+      minX: envBox.min.x,
+      maxX: envBox.max.x,
+      minZ: envBox.min.z,
+      maxZ: envBox.max.z,
+    };
 
-    if (!carTemplate1 && !carTemplate2) {
-      console.warn('No car1/car2 found in scene.glb');
+    // ✅ Automatically find car1–car6 meshes
+    const carNames = ['car1', 'car2', 'car3', 'car4', 'car5', 'car6'];
+    carTemplates = [];
+
+    env.traverse((obj) => {
+      const n = (obj.name || '').toLowerCase();
+      if (carNames.includes(n)) {
+        carTemplates.push(obj);
+      }
+    });
+
+    if (carTemplates.length === 0) {
+      console.warn('⚠️ No car1–car6 found in scene.glb');
+    } else {
+      console.log(`✅ Found ${carTemplates.length} car templates:`, carTemplates.map(o => o.name));
+      carTemplates.forEach(t => (t.visible = false)); // hide originals
+      // Configure lanes from Cube008 and Cube009
+      const laneNames = ['cube008', 'cube009'];
+      const foundLanes = [];
+      laneNames.forEach((lname) => {
+        const laneObj = findByNameDeep(env, lname);
+        if (laneObj) {
+          // Compute world-space bbox to determine z extents and x position
+          const box = new THREE.Box3().setFromObject(laneObj);
+          // Some lanes might be rotated; use center x
+          const center = new THREE.Vector3();
+          box.getCenter(center);
+          const minZ = Math.min(box.min.z, box.max.z);
+          const maxZ = Math.max(box.min.z, box.max.z);
+          foundLanes.push({ x: center.x, minZ, maxZ });
+        }
+      });
+
+      // Compute player start at the center of mesh named 'Cube'
+      const startMesh = findByNameDeep(env, 'cube');
+      if (startMesh) {
+        const startBox = new THREE.Box3().setFromObject(startMesh);
+        const startCenter = new THREE.Vector3();
+        startBox.getCenter(startCenter);
+        // place slightly above its top so the model isn't intersecting
+        playerStart = new THREE.Vector3(startCenter.x, startBox.max.y + 0.02, startCenter.z);
+        console.log('Spawn set from Cube at', playerStart);
+        if (playerModel) {
+          playerModel.position.copy(playerStart);
+        }
+      } else {
+        console.warn('Mesh named "Cube" not found for spawn.');
+      }
+
+      if (foundLanes.length === 0) {
+        console.warn('⚠️ Cube008/Cube009 not found. Using fallback lane positions.');
+        laneSpecs = [
+          { x: -4.0, speed: 9.0, dir: 1, count: 3, spacing: 18, startZ: -60, minZ: -60, maxZ: 60 },
+          { x:  4.0, speed: 10.0, dir: -1, count: 2, spacing: 24, startZ:  60, minZ: -60, maxZ: 60 },
+        ];
+      } else {
+        // Build two lane specs based on found lanes (upwards and downwards flows)
+        laneSpecs = foundLanes.slice(0, 2).map((lane, idx) => ({
+          x: lane.x,
+          speed: idx === 0 ? 9.0 : 12.0,
+          dir: idx === 0 ? 1 : -1,
+          count: idx === 0 ? 3 : 2,
+          spacing: idx === 0 ? 18 : 22,
+          startZ: idx === 0 ? lane.minZ : lane.maxZ,
+          minZ: lane.minZ,
+          maxZ: lane.maxZ,
+        }));
+      }
+
+      buildLanes();
     }
-
-    if (carTemplate1) carTemplate1.visible = false;
-    if (carTemplate2) carTemplate2.visible = false;
-
-    buildLanes();
   },
   undefined,
   (err) => console.error('Failed to load environment scene.glb', err)
@@ -146,13 +225,16 @@ loader.load(
 // ------------------- Load Character -------------------
 let characterControls = null;
 let playerModel = null;
+let playerStart = null;
 
 loader.load(
   '/models/Soldier.glb',
   (gltf) => {
     playerModel = gltf.scene;
     setShadowFlags(playerModel);
-    playerModel.position.set(0, 0, 0);
+        if (playerStart) playerModel.position.copy(playerStart);
+        else playerModel.position.set(0, 0, 0);
+        focusCameraOnPlayer();
     scene.add(playerModel);
 
     const mixer = new THREE.AnimationMixer(playerModel);
@@ -190,6 +272,15 @@ renderer.setAnimationLoop(() => {
   if (characterControls) characterControls.update(dt, keysPressed);
   else controls.update();
 
+  // Clamp player within environment bounds
+  if (playerModel && worldBounds) {
+    const pad = 0.5; // small padding so we don't intersect edges
+    const px = THREE.MathUtils.clamp(playerModel.position.x, worldBounds.minX + pad, worldBounds.maxX - pad);
+    const pz = THREE.MathUtils.clamp(playerModel.position.z, worldBounds.minZ + pad, worldBounds.maxZ - pad);
+    playerModel.position.x = px;
+    playerModel.position.z = pz;
+  }
+
   // Move vehicles
   lanes.forEach((lane) => {
     lane.vehicles.forEach((v) => {
@@ -199,18 +290,23 @@ renderer.setAnimationLoop(() => {
     });
   });
 
-  // Simple collision
+  // Simple collision detection
   if (playerModel) {
     const playerBox = new THREE.Box3().setFromObject(playerModel);
     let hit = false;
     for (const lane of lanes) {
       for (const v of lane.vehicles) {
         const box = new THREE.Box3().setFromObject(v.mesh);
-        if (playerBox.intersectsBox(box)) { hit = true; break; }
+        if (playerBox.intersectsBox(box)) {
+          hit = true;
+          break;
+        }
       }
       if (hit) {
-        // Reset player
-        playerModel.position.set(0, 0, 0);
+        // Reset player position if hit
+        if (playerStart) playerModel.position.copy(playerStart);
+        else playerModel.position.set(0, 0, 0);
+        focusCameraOnPlayer();
         break;
       }
     }
