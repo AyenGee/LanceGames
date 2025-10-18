@@ -43,7 +43,7 @@ let messageEl = null;
 function setupMessageOverlay() {
     messageEl = document.createElement('div');
     messageEl.style.position = 'fixed';
-    messageEl.style.top = '20px';
+    messageEl.style.top = '500px';
     messageEl.style.left = '50%';
     messageEl.style.transform = 'translateX(-50%)';
     messageEl.style.padding = '10px 16px';
@@ -80,7 +80,7 @@ let gameStarted = false;
     overlay.style.flexDirection = 'column';
     overlay.style.alignItems = 'center';
     overlay.style.justifyContent = 'center';
-    overlay.style.background = 'rgba(0,0,0,0.6)';
+    overlay.style.background = 'rgba(0,0,0,0.4)';
     overlay.style.color = '#fff';
     overlay.style.fontFamily = 'sans-serif';
     overlay.style.padding = '24px';
@@ -132,51 +132,193 @@ let timeMsLeft = timeMsTotal;
 let gameEnded = false;
 let gamePaused = false;
 function setupHUD() {
+
+    // Main HUD container - positioned at top center, BIGGER and more game-like
     hudEl = document.createElement('div');
     hudEl.style.position = 'fixed';
     hudEl.style.top = '20px';
-    hudEl.style.left = '20px';
-    hudEl.style.padding = '10px 12px';
-    hudEl.style.background = 'rgba(0,0,0,0.5)';
+    hudEl.style.left = '200px';
+    hudEl.style.transform = 'translateX(-50%)';
+    hudEl.style.padding = '20px 30px';
+    hudEl.style.background = 'linear-gradient(145deg, rgba(0,0,0,0.1), rgba(20,20,30,0.9))';
     hudEl.style.color = '#fff';
-    hudEl.style.fontFamily = 'sans-serif';
-    hudEl.style.fontSize = '14px';
-    hudEl.style.borderRadius = '6px';
+    hudEl.style.fontFamily = 'Arial, sans-serif';
+    hudEl.style.fontSize = '18px';
+    hudEl.style.borderRadius = '16px';
     hudEl.style.zIndex = '9999';
     hudEl.style.display = 'flex';
     hudEl.style.flexDirection = 'column';
-    hudEl.style.gap = '8px';
+    hudEl.style.gap = '16px';
+    hudEl.style.border = '3px solid rgba(255, 255, 0, 0.6)';
+    hudEl.style.backdropFilter = 'blur(15px)';
+    hudEl.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+    hudEl.style.minWidth = '50px';
+    hudEl.style.height;
+    hudEl.style.textAlign = 'center';
+  
+    const progressContainer = document.createElement('div');
+// After creating progressContainer, add this:
+//progressContainer.style.opacity = '0.9'; // Set the same opacity as your HUD
 
-    hudTextEl = document.createElement('div');
-    hudTextEl.textContent = '';
 
+
+    // Progress bar container - BIGGER
+    
+    progressContainer.style.position = 'relative';
+    progressContainer.style.width = '200px';
+    progressContainer.style.height = '12px';
+    progressContainer.style.background = 'rgba(0, 0, 0, 0.8)';
+    progressContainer.style.borderRadius = '6px';
+    progressContainer.style.overflow = 'hidden';
+    progressContainer.style.border = '2px solid rgba(255, 255, 0, 0.3)';
+    progressContainer.style.margin = '0 auto';
+
+    // Progress bar (yellow line that follows time) - THICKER
+    const progressBar = document.createElement('div');
+    progressBar.id = 'time-progress-bar';
+    progressBar.style.position = 'absolute';
+    progressBar.style.top = '0';
+    progressBar.style.left = '0';
+    progressBar.style.height = '100%';
+    progressBar.style.background = 'linear-gradient(90deg, #FFD700, #FFA500, #FF8C00)';
+    progressBar.style.borderRadius = '4px';
+    progressBar.style.transition = 'width 0.5s ease';
+    progressBar.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+    progressBar.style.animation = 'pulse 2s infinite';
+    progressContainer.appendChild(progressBar);
+    progressContainer.style.opacity = 1.5; // Set the same opacity as your HUD
+
+    // 
+    // progressBar.addEventListener("click", ()=>{
+    //     progressBar.style.opacity
+    // })
+
+    // Add CSS animation for the progress bar
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(255, 215, 0, 1), inset 0 1px 0 rgba(255, 255, 255, 0.5); }
+        }
+    `;
+    document.head.appendChild(style);
+
+    //
+   
+    //
+
+    // Main content row - BIGGER spacing
+    const mainContentRow = document.createElement('div');
+    mainContentRow.style.display = 'flex';
+    mainContentRow.style.alignItems = 'left';
+    mainContentRow.style.justifyContent = 'center';
+    mainContentRow.style.gap = '10px';
+    mainContentRow.style.margin = '0px 0';
+
+    // Reports Tracker Container - BIGGER and more game-like
+    const reportsContainer = document.createElement('div');
+    reportsContainer.style.display = 'flex';
+    reportsContainer.style.flexDirection = 'row';
+    reportsContainer.style.alignItems = 'center';
+    reportsContainer.style.gap = '8px';
+    reportsContainer.style.padding = '15px 20px';
+    reportsContainer.style.background = 'linear-gradient(145deg, rgba(0, 100, 200, 0.3), rgba(0, 150, 255, 0.2))';
+    reportsContainer.style.borderRadius = '12px';
+    reportsContainer.style.border = '2px solid rgba(0, 150, 255, 0.6)';
+    reportsContainer.style.boxShadow = '0 6px 20px rgba(0, 150, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+    reportsContainer.style.width = '180px';
+    reportsContainer.style.height = '10px';
+
+    const reportsLabel = document.createElement('div');
+    reportsLabel.textContent = 'REPORTS:';
+   // reportsLabel.style.left = '2000px'
+    reportsLabel.alignItems= "left"
+    reportsLabel.style.fontSize = '14px';
+    reportsLabel.style.color = '#87CEEB';
+    reportsLabel.style.fontWeight = 'bold';
+    reportsLabel.style.textShadow = '0 0 10px rgba(135, 206, 235, 0.5)';
+
+    const reportsCounter = document.createElement('div');
+    reportsCounter.id = 'reports-counter';
+    reportsCounter.style.fontSize = '24px';
+    reportsCounter.style.marginLeft = '30px';
+    reportsCounter.style.color = '#fff';
+    reportsCounter.style.fontWeight = 'bold';
+    reportsCounter.style.textShadow = '0 0 15px rgba(255, 255, 255, 0.5)';
+
+    reportsContainer.appendChild(reportsLabel);
+    reportsContainer.appendChild(reportsCounter);
+
+    mainContentRow.appendChild(reportsContainer);
+
+    // Controls container - BIGGER buttons
     const controlsRow = document.createElement('div');
     controlsRow.style.display = 'flex';
-    controlsRow.style.gap = '8px';
+    controlsRow.style.gap = '20px';
+    controlsRow.style.justifyContent = 'center';
+    controlsRow.style.marginTop = '10px';
 
+    // Beautiful Pause Button - BIGGER and more game-like
     pauseBtn = document.createElement('button');
-    pauseBtn.textContent = 'Pause';
+    pauseBtn.textContent = '⏸ PAUSE';
     pauseBtn.style.cursor = 'pointer';
-    pauseBtn.style.padding = '6px 10px';
+   // pauseBtn.style.padding = '0px 2px';
     pauseBtn.style.border = 'none';
-    pauseBtn.style.borderRadius = '4px';
-    pauseBtn.style.background = '#cc3333';
+    pauseBtn.style.borderRadius = '12px';
+    pauseBtn.style.background = 'linear-gradient(145deg, #ff6b6b, #ee5a52, #d63031)';
+    pauseBtn.style.opacity = 0.1;
     pauseBtn.style.color = '#fff';
+    pauseBtn.style.fontSize = '11px';
+    pauseBtn.style.fontWeight = 'bold';
+    pauseBtn.style.transition = 'all 0.3s ease';
+    pauseBtn.style.boxShadow = '0 8px 25px rgba(255, 107, 107, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+    pauseBtn.style.textShadow = '0 2px 4px rgba(0, 0, 0, 0.3)';
+    pauseBtn.style.width = '100px';
+    pauseBtn.style.height = '25px';
+    pauseBtn.addEventListener('mouseenter', () => {
+        pauseBtn.style.transform = 'translateY(-3px) scale(1.05)';
+        pauseBtn.style.boxShadow = '0 12px 35px rgba(255, 107, 107, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+        pauseBtn.style.opacity = 1;
+    });
+    pauseBtn.addEventListener('mouseleave', () => {
+        pauseBtn.style.transform = 'translateY(0) scale(1)';
+        pauseBtn.style.boxShadow = '0 8px 25px rgba(255, 107, 107, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+        pauseBtn.style.opacity = 0.1;
+    });
     pauseBtn.addEventListener('click', () => {
         if (!gameStarted || gameEnded) return;
         gamePaused = true;
     });
 
+    // Beautiful Play Button - BIGGER and more game-like
     playBtn = document.createElement('button');
-    playBtn.textContent = 'Play';
+    playBtn.textContent = '▶ PLAY';
     playBtn.style.cursor = 'pointer';
-    playBtn.style.padding = '6px 10px';
+  //  playBtn.style.padding = '15px 25px';
     playBtn.style.border = 'none';
-    playBtn.style.borderRadius = '4px';
-    playBtn.style.background = '#00a86b';
+    playBtn.style.borderRadius = '12px';
+    playBtn.style.background = 'linear-gradient(145deg, #4ecdc4, #44a08d, #2d8659)';
+    playBtn.style.opacity = 0.2
     playBtn.style.color = '#fff';
+    playBtn.style.fontSize = '11px';
+    playBtn.style.fontWeight = 'bold';
+    playBtn.style.transition = 'all 0.3s ease';
+    playBtn.style.boxShadow = '0 8px 25px rgba(78, 205, 196, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+    playBtn.style.textShadow = '0 2px 4px rgba(0, 0, 0, 0.3)';
+    playBtn.style.width = '100px';
+    playBtn.style.height = '25px';
+    playBtn.addEventListener('mouseenter', () => {
+        playBtn.style.transform = 'translateY(-3px) scale(1.05)';
+        playBtn.style.boxShadow = '0 12px 35px rgba(78, 205, 196, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+        playBtn.style.opacity = 1;
+    });
+    playBtn.addEventListener('mouseleave', () => {
+        playBtn.style.transform = 'translateY(0) scale(1)';
+        playBtn.style.boxShadow = '0 8px 25px rgba(78, 205, 196, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+        playBtn.style.opacity = 0.1;
+    });
     playBtn.addEventListener('click', () => {
-        if (gameEnded) return; // prevent resume after end
+        if (gameEnded) return;
         gameStarted = true;
         gamePaused = false;
     });
@@ -184,8 +326,26 @@ function setupHUD() {
     controlsRow.appendChild(playBtn);
     controlsRow.appendChild(pauseBtn);
 
-    hudEl.appendChild(hudTextEl);
+    // Assemble HUD
+    hudEl.appendChild(progressContainer);
+    hudEl.appendChild(mainContentRow);
     hudEl.appendChild(controlsRow);
+    //
+    hudEl.addEventListener("mouseleave", ()=>{
+        hudEl.style.opacity = 0.3;
+     // mainContentRow.style.opacity = 0.3;
+      progressBar.style.opacity = 1;
+        // Force the progress container to stay fully opaque
+       // progressContainer.style.opacity = '1.0 !important';
+    })
+    //
+    hudEl.addEventListener("mouseenter", ()=>{
+        hudEl.style.opacity = 1;
+        mainContentRow.style.opacity = 1;
+        });
+    //
+
+
     document.body.appendChild(hudEl);
     updateHUD();
 }
@@ -198,7 +358,38 @@ function formatTime(ms) {
 }
 
 function updateHUD() {
-    if (hudTextEl) hudTextEl.textContent = `Reports: ${reportsCollected}/${totalReports} | Time: ${formatTime(timeMsLeft)}`;
+   
+
+    // Update reports counter
+    const reportsCounter = document.getElementById('reports-counter');
+    if (reportsCounter) {
+        reportsCounter.textContent = `${reportsCollected}/${totalReports}`;
+    }
+    
+    // Update time display (highlighted in yellow)
+    const timeDisplay = document.getElementById('time-display');
+    if (timeDisplay) {
+        timeDisplay.textContent = formatTime(timeMsLeft);
+    }
+    
+    // Update progress bar (yellow line that follows time)
+    const progressBar = document.getElementById('time-progress-bar');
+    if (progressBar) {
+        const progressPercent = (timeMsLeft / timeMsTotal) * 100;
+        progressBar.style.width = `${Math.max(0, progressPercent)}%`;
+        
+        // Change color as time runs out with more dramatic effects
+        if (progressPercent < 25) {
+            progressBar.style.background = 'linear-gradient(90deg, #ff4444, #cc0000, #990000)';
+            progressBar.style.boxShadow = '0 0 25px rgba(255, 68, 68, 1), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+        } else if (progressPercent < 50) {
+            progressBar.style.background = 'linear-gradient(90deg, #ffaa00, #ff6600, #cc4400)';
+            progressBar.style.boxShadow = '0 0 20px rgba(255, 170, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+        } else {
+            progressBar.style.background = 'linear-gradient(90deg, #FFD700, #FFA500, #FF8C00)';
+            progressBar.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+        }
+    }
 }
 
 function spawnPapers() {
@@ -224,6 +415,8 @@ function spawnPapers() {
 }
 
 setupHUD();
+// After creating progressContainer, add this:
+//progressContainer.style.opacity = '1.0'; // Keep progress bar fully visible
 spawnPapers();
 
 // === Load Environment ===
@@ -326,7 +519,10 @@ function teleportToMiniChallenge() {
     };
     localStorage.setItem("gameState", JSON.stringify(state));
 
-    window.location.href = "http://localhost:5173/carcross.html";
+     
+     // add a intermediary loading screen so a diff html load screen that loads and when it gets to 100% 
+     // olnyu then do we load carcross
+     window.location.href = "http://localhost:5173/carcross.html";
 }
 
 // === Animate Loop ===
