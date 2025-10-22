@@ -1,0 +1,163 @@
+/* Loading Screen Styles */
+#loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0a2540 0%, #4b2e83 50%, #0a2540 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity 3s ease;
+}
+
+#loading-screen.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#loading-screen .loading-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#loading-screen .loading-image {
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  object-fit: cover;
+}
+
+#loading-screen .loading-progress {
+  position: absolute;
+  left: 50%;
+  bottom: 5%;
+  transform: translateX(-50%);
+  width: 70vw;
+  max-width: 960px;
+  height: 12px;
+  background: #333;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+#loading-screen .loading-progress__bar {
+  width: 0%;
+  height: 100%;
+  background: #00ff66;
+  border-radius: 5px;
+  transition: width 0.2s ease;
+}
+.loading-image {
+  width: 3000px;          /* set width */
+  height: auto;          /* maintain aspect ratio */
+  display: block;        /* optional */
+  margin: 0 auto 20px;   /* center horizontally + spacing below */
+  /* add any other styles you want */
+}
+
+/* === COMMON LOADING STYLES === */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  transition: opacity 0.5s ease;
+}
+
+.loading-overlay img {
+  width: 200px;       /* default image size */
+  margin-bottom: 20px;
+  display: block;
+}
+
+.loading-progress-container {
+  width: 60%;
+  height: 10px;
+  background: #333;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.loading-progress-bar {
+  width: 0%;
+  height: 100%;
+  background: #0f0;
+  border-radius: 5px;
+  transition: width 0.2s ease;
+}
+
+/* === CARCROSS-SPECIFIC OVERRIDES === */
+#loadingCC-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: #000; /* keep backdrop behind image */
+  overflow: hidden;
+}
+
+#loadingCC-image {
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover; /* fill entire screen maintaining aspect */
+  display: block;
+}
+
+#loadingCC-progress-container {
+  position: absolute;
+  left: 50%;
+  bottom: 5%;
+  transform: translateX(-50%);
+  width: 70vw;
+  max-width: 960px;
+  height: 12px;
+  background: #222;
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+#loadingCC-progress-bar {
+  background: #0af;      /* different color for Carcross progress */
+}
+
+/* === START OVERLAY === */
+#start-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  text-align: center;
+  padding: 20px;
+}
+
+.start-text {
+  margin-bottom: 20px;
+  font-size: 18px;
+}
+
+.start-btn {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}

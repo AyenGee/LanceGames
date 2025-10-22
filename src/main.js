@@ -5,9 +5,69 @@ import { CharacterControls } from './characterControls.js';
 
 // === Scene Setup ===
 const scene = new THREE.Scene();
+// 
+let gameStarted = false;
+// === LOADING SCREEN (CSS-driven) ===
+let loadingOverlay;
+let progressBar;
+function createLoadingUI() {
+  loadingOverlay = document.createElement('div');
+  loadingOverlay.id = 'loading-screen';
+
+  // Container to allow absolute-positioned progress over image
+  const container = document.createElement('div');
+  container.className = 'loading-container';
+
+  const img = document.createElement('img');
+  img.className = 'loading-image';
+  img.src = '/models/main.png'; // optional splash image
+  img.alt = 'Loading';
+  container.appendChild(img);
+
+  const progress = document.createElement('div');
+  progress.className = 'loading-progress';
+  progressBar = document.createElement('div');
+  progressBar.className = 'loading-progress__bar';
+  progress.appendChild(progressBar);
+  container.appendChild(progress);
+
+  loadingOverlay.appendChild(container);
+
+  document.body.appendChild(loadingOverlay);
+  
+}
+
+createLoadingUI();
+
+
+// === THREE.js Loading Manager ===
+const manager = new THREE.LoadingManager();
+let loadStart = null;
+const MIN_LOAD_MS = 4000; // minimum time to keep the loader visible
+manager.onStart = function () {
+  if (progressBar) progressBar.style.width = '0%';
+  loadStart = performance.now();
+};
+manager.onProgress = function (_url, itemsLoaded, itemsTotal) {
+  if (!progressBar || !itemsTotal) return;
+  const pct = Math.round((itemsLoaded / itemsTotal) * 100);
+  progressBar.style.width = `${pct}%`;
+};
+manager.onLoad = function () {
+  if (!loadingOverlay) return;
+  const elapsed = loadStart ? (performance.now() - loadStart) : MIN_LOAD_MS;
+  const delay = Math.max(0, MIN_LOAD_MS - elapsed);
+  setTimeout(() => {
+    loadingOverlay.classList.add('is-hidden');
+    setTimeout(() => loadingOverlay.remove(), 500);
+    setupStartOverlay()
+  }, delay);
+  
+};
+let animatee = true;
 
 // Load sky texture as background
-const textureLoader = new THREE.TextureLoader();
+const textureLoader = new THREE.TextureLoader(manager);
 textureLoader.load('/models/sky.jpeg', (texture) => {
     texture.encoding = THREE.sRGBEncoding; 
     scene.background = texture;
@@ -42,78 +102,50 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 let messageEl = null;
 function setupMessageOverlay() {
     messageEl = document.createElement('div');
-    messageEl.style.position = 'fixed';
-    messageEl.style.top = '500px';
-    messageEl.style.left = '50%';
-    messageEl.style.transform = 'translateX(-50%)';
-    messageEl.style.padding = '10px 16px';
-    messageEl.style.background = 'rgba(0,0,0,0.7)';
-    messageEl.style.color = '#fff';
-    messageEl.style.fontFamily = 'sans-serif';
-    messageEl.style.fontSize = '14px';
-    messageEl.style.borderRadius = '6px';
-    messageEl.style.zIndex = '9999';
-    messageEl.style.display = 'none';
+    messageEl.className = 'message-overlay';
     document.body.appendChild(messageEl);
 }
 
 function showMessage(text, ms = 2000) {
     if (!messageEl) setupMessageOverlay();
     messageEl.textContent = text;
-    messageEl.style.display = 'block';
+    messageEl.classList.add('is-visible');
     clearTimeout(showMessage._t);
     showMessage._t = setTimeout(() => {
-        messageEl.style.display = 'none';
+        messageEl.classList.remove('is-visible');
     }, ms);
 }
 
 setupMessageOverlay();
 
 // === Start Screen (Instructions) ===
-let gameStarted = false;
-(function setupStartOverlay() {
-    const overlay = document.createElement('div');
-    overlay.id = 'start-overlay';
-    overlay.style.position = 'fixed';
-    overlay.style.inset = '0';
-    overlay.style.display = 'flex';
-    overlay.style.flexDirection = 'column';
-    overlay.style.alignItems = 'center';
-    overlay.style.justifyContent = 'center';
-    overlay.style.background = 'rgba(0,0,0,0.4)';
-    overlay.style.color = '#fff';
-    overlay.style.fontFamily = 'sans-serif';
-    overlay.style.padding = '24px';
-    overlay.style.textAlign = 'center';
-    overlay.style.zIndex = '10000';
 
-    const text = document.createElement('div');
-    text.style.maxWidth = '720px';
-    text.style.marginBottom = '16px';
-    text.style.lineHeight = '1.5';
-    text.textContent = 'find the report and submit it before time runs out. NOTE, there are multiple challenges in the way.  PLAY!';
 
-    const btn = document.createElement('button');
-    btn.textContent = 'PLAY';
-    btn.style.cursor = 'pointer';
-    btn.style.padding = '10px 18px';
-    btn.style.fontSize = '16px';
-    btn.style.border = 'none';
-    btn.style.borderRadius = '6px';
-    btn.style.background = '#00a86b';
-    btn.style.color = '#fff';
+    function setupStartOverlay() {
+        const overlay = document.createElement('div');
+        overlay.id = 'start-overlay';
 
-    btn.addEventListener('click', () => {
-        gameStarted = true;
-        gameEnded = false;
-        timeMsLeft = timeMsTotal;
-        overlay.remove();
-    });
+        const text = document.createElement('div');
+        text.className = 'start-text';
+        text.textContent = 'Find the report and submit it before time runs out. NOTE, there are multiple challenges in the way. PLAY!';
 
-    overlay.appendChild(text);
-    overlay.appendChild(btn);
-    document.body.appendChild(overlay);
-})();
+        const btn = document.createElement('button');
+        btn.className = 'start-btn';
+        btn.textContent = 'PLAY';
+
+        btn.addEventListener('click', () => {
+            gameStarted = true;
+            gameEnded = false;
+            timeMsLeft = timeMsTotal;
+            overlay.remove();
+        });
+
+        overlay.appendChild(text);
+        overlay.appendChild(btn);
+        document.body.appendChild(overlay);
+        setupHUD();
+    }
+
 
 // === Collectibles: Reports (3 papers) ===
 const paperBoxes = [];
@@ -127,196 +159,61 @@ let hudEl = null;
 let hudTextEl = null;
 let pauseBtn = null;
 let playBtn = null;
-let timeMsTotal = 120000; // 2 minutes
+let timeMsTotal = 20*1000; //
 let timeMsLeft = timeMsTotal;
 let gameEnded = false;
 let gamePaused = false;
 function setupHUD() {
-
-    // Main HUD container - positioned at top center, BIGGER and more game-like
+    // Main HUD container
     hudEl = document.createElement('div');
-    hudEl.style.position = 'fixed';
-    hudEl.style.top = '20px';
-    hudEl.style.left = '200px';
-    hudEl.style.transform = 'translateX(-50%)';
-    hudEl.style.padding = '20px 30px';
-    hudEl.style.background = 'linear-gradient(145deg, rgba(0,0,0,0.1), rgba(20,20,30,0.9))';
-    hudEl.style.color = '#fff';
-    hudEl.style.fontFamily = 'Arial, sans-serif';
-    hudEl.style.fontSize = '18px';
-    hudEl.style.borderRadius = '16px';
-    hudEl.style.zIndex = '9999';
-    hudEl.style.display = 'flex';
-    hudEl.style.flexDirection = 'column';
-    hudEl.style.gap = '16px';
-    hudEl.style.border = '3px solid rgba(255, 255, 0, 0.6)';
-    hudEl.style.backdropFilter = 'blur(15px)';
-    hudEl.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
-    hudEl.style.minWidth = '50px';
-    hudEl.style.height;
-    hudEl.style.textAlign = 'center';
-  
+    hudEl.className = 'hud';
+
     const progressContainer = document.createElement('div');
-// After creating progressContainer, add this:
-//progressContainer.style.opacity = '0.9'; // Set the same opacity as your HUD
+    progressContainer.className = 'progress-container';
 
-
-
-    // Progress bar container - BIGGER
-    
-    progressContainer.style.position = 'relative';
-    progressContainer.style.width = '200px';
-    progressContainer.style.height = '12px';
-    progressContainer.style.background = 'rgba(0, 0, 0, 0.8)';
-    progressContainer.style.borderRadius = '6px';
-    progressContainer.style.overflow = 'hidden';
-    progressContainer.style.border = '2px solid rgba(255, 255, 0, 0.3)';
-    progressContainer.style.margin = '0 auto';
-
-    // Progress bar (yellow line that follows time) - THICKER
+    // Progress bar (time)
     const progressBar = document.createElement('div');
     progressBar.id = 'time-progress-bar';
-    progressBar.style.position = 'absolute';
-    progressBar.style.top = '0';
-    progressBar.style.left = '0';
-    progressBar.style.height = '100%';
-    progressBar.style.background = 'linear-gradient(90deg, #FFD700, #FFA500, #FF8C00)';
-    progressBar.style.borderRadius = '4px';
-    progressBar.style.transition = 'width 0.5s ease';
-    progressBar.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
-    progressBar.style.animation = 'pulse 2s infinite';
+    progressBar.className = 'time-progress-bar';
     progressContainer.appendChild(progressBar);
-    progressContainer.style.opacity = 1.5; // Set the same opacity as your HUD
 
-    // 
-    // progressBar.addEventListener("click", ()=>{
-    //     progressBar.style.opacity
-    // })
-
-    // Add CSS animation for the progress bar
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
-            50% { box-shadow: 0 0 25px rgba(255, 215, 0, 1), inset 0 1px 0 rgba(255, 255, 255, 0.5); }
-        }
-    `;
-    document.head.appendChild(style);
-
-    //
-   
-    //
-
-    // Main content row - BIGGER spacing
+    // Main content row
     const mainContentRow = document.createElement('div');
-    mainContentRow.style.display = 'flex';
-    mainContentRow.style.alignItems = 'left';
-    mainContentRow.style.justifyContent = 'center';
-    mainContentRow.style.gap = '10px';
-    mainContentRow.style.margin = '0px 0';
+    mainContentRow.className = 'main-content-row';
 
-    // Reports Tracker Container - BIGGER and more game-like
+    // Reports Tracker
     const reportsContainer = document.createElement('div');
-    reportsContainer.style.display = 'flex';
-    reportsContainer.style.flexDirection = 'row';
-    reportsContainer.style.alignItems = 'center';
-    reportsContainer.style.gap = '8px';
-    reportsContainer.style.padding = '15px 20px';
-    reportsContainer.style.background = 'linear-gradient(145deg, rgba(0, 100, 200, 0.3), rgba(0, 150, 255, 0.2))';
-    reportsContainer.style.borderRadius = '12px';
-    reportsContainer.style.border = '2px solid rgba(0, 150, 255, 0.6)';
-    reportsContainer.style.boxShadow = '0 6px 20px rgba(0, 150, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
-    reportsContainer.style.width = '180px';
-    reportsContainer.style.height = '10px';
+    reportsContainer.className = 'reports-container';
 
     const reportsLabel = document.createElement('div');
+    reportsLabel.className = 'reports-label';
     reportsLabel.textContent = 'REPORTS:';
-   // reportsLabel.style.left = '2000px'
-    reportsLabel.alignItems= "left"
-    reportsLabel.style.fontSize = '14px';
-    reportsLabel.style.color = '#87CEEB';
-    reportsLabel.style.fontWeight = 'bold';
-    reportsLabel.style.textShadow = '0 0 10px rgba(135, 206, 235, 0.5)';
 
     const reportsCounter = document.createElement('div');
     reportsCounter.id = 'reports-counter';
-    reportsCounter.style.fontSize = '24px';
-    reportsCounter.style.marginLeft = '30px';
-    reportsCounter.style.color = '#fff';
-    reportsCounter.style.fontWeight = 'bold';
-    reportsCounter.style.textShadow = '0 0 15px rgba(255, 255, 255, 0.5)';
+    reportsCounter.className = 'reports-counter';
 
     reportsContainer.appendChild(reportsLabel);
     reportsContainer.appendChild(reportsCounter);
-
     mainContentRow.appendChild(reportsContainer);
 
-    // Controls container - BIGGER buttons
+    // Controls container
     const controlsRow = document.createElement('div');
-    controlsRow.style.display = 'flex';
-    controlsRow.style.gap = '20px';
-    controlsRow.style.justifyContent = 'center';
-    controlsRow.style.marginTop = '10px';
+    controlsRow.className = 'controls-row';
 
-    // Beautiful Pause Button - BIGGER and more game-like
+    // Pause Button
     pauseBtn = document.createElement('button');
+    pauseBtn.className = 'btn btn--pause';
     pauseBtn.textContent = '⏸ PAUSE';
-    pauseBtn.style.cursor = 'pointer';
-   // pauseBtn.style.padding = '0px 2px';
-    pauseBtn.style.border = 'none';
-    pauseBtn.style.borderRadius = '12px';
-    pauseBtn.style.background = 'linear-gradient(145deg, #ff6b6b, #ee5a52, #d63031)';
-    pauseBtn.style.opacity = 0.1;
-    pauseBtn.style.color = '#fff';
-    pauseBtn.style.fontSize = '11px';
-    pauseBtn.style.fontWeight = 'bold';
-    pauseBtn.style.transition = 'all 0.3s ease';
-    pauseBtn.style.boxShadow = '0 8px 25px rgba(255, 107, 107, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
-    pauseBtn.style.textShadow = '0 2px 4px rgba(0, 0, 0, 0.3)';
-    pauseBtn.style.width = '100px';
-    pauseBtn.style.height = '25px';
-    pauseBtn.addEventListener('mouseenter', () => {
-        pauseBtn.style.transform = 'translateY(-3px) scale(1.05)';
-        pauseBtn.style.boxShadow = '0 12px 35px rgba(255, 107, 107, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
-        pauseBtn.style.opacity = 1;
-    });
-    pauseBtn.addEventListener('mouseleave', () => {
-        pauseBtn.style.transform = 'translateY(0) scale(1)';
-        pauseBtn.style.boxShadow = '0 8px 25px rgba(255, 107, 107, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
-        pauseBtn.style.opacity = 0.1;
-    });
     pauseBtn.addEventListener('click', () => {
         if (!gameStarted || gameEnded) return;
         gamePaused = true;
     });
 
-    // Beautiful Play Button - BIGGER and more game-like
+    // Play Button
     playBtn = document.createElement('button');
+    playBtn.className = 'btn btn--play';
     playBtn.textContent = '▶ PLAY';
-    playBtn.style.cursor = 'pointer';
-  //  playBtn.style.padding = '15px 25px';
-    playBtn.style.border = 'none';
-    playBtn.style.borderRadius = '12px';
-    playBtn.style.background = 'linear-gradient(145deg, #4ecdc4, #44a08d, #2d8659)';
-    playBtn.style.opacity = 0.2
-    playBtn.style.color = '#fff';
-    playBtn.style.fontSize = '11px';
-    playBtn.style.fontWeight = 'bold';
-    playBtn.style.transition = 'all 0.3s ease';
-    playBtn.style.boxShadow = '0 8px 25px rgba(78, 205, 196, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
-    playBtn.style.textShadow = '0 2px 4px rgba(0, 0, 0, 0.3)';
-    playBtn.style.width = '100px';
-    playBtn.style.height = '25px';
-    playBtn.addEventListener('mouseenter', () => {
-        playBtn.style.transform = 'translateY(-3px) scale(1.05)';
-        playBtn.style.boxShadow = '0 12px 35px rgba(78, 205, 196, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
-        playBtn.style.opacity = 1;
-    });
-    playBtn.addEventListener('mouseleave', () => {
-        playBtn.style.transform = 'translateY(0) scale(1)';
-        playBtn.style.boxShadow = '0 8px 25px rgba(78, 205, 196, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
-        playBtn.style.opacity = 0.1;
-    });
     playBtn.addEventListener('click', () => {
         if (gameEnded) return;
         gameStarted = true;
@@ -330,22 +227,6 @@ function setupHUD() {
     hudEl.appendChild(progressContainer);
     hudEl.appendChild(mainContentRow);
     hudEl.appendChild(controlsRow);
-    //
-    hudEl.addEventListener("mouseleave", ()=>{
-        hudEl.style.opacity = 0.3;
-     // mainContentRow.style.opacity = 0.3;
-      progressBar.style.opacity = 1;
-        // Force the progress container to stay fully opaque
-       // progressContainer.style.opacity = '1.0 !important';
-    })
-    //
-    hudEl.addEventListener("mouseenter", ()=>{
-        hudEl.style.opacity = 1;
-        mainContentRow.style.opacity = 1;
-        });
-    //
-
-
     document.body.appendChild(hudEl);
     updateHUD();
 }
@@ -356,6 +237,9 @@ function formatTime(ms) {
     const s = (totalSec % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
 }
+// create a restart button that restarts the games
+
+
 
 function updateHUD() {
    
@@ -377,17 +261,15 @@ function updateHUD() {
     if (progressBar) {
         const progressPercent = (timeMsLeft / timeMsTotal) * 100;
         progressBar.style.width = `${Math.max(0, progressPercent)}%`;
-        
-        // Change color as time runs out with more dramatic effects
+
+        // Change color via CSS classes as time runs out
+        progressBar.classList.remove('time-progress-bar--ok', 'time-progress-bar--mid', 'time-progress-bar--low');
         if (progressPercent < 25) {
-            progressBar.style.background = 'linear-gradient(90deg, #ff4444, #cc0000, #990000)';
-            progressBar.style.boxShadow = '0 0 25px rgba(255, 68, 68, 1), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+            progressBar.classList.add('time-progress-bar--low');
         } else if (progressPercent < 50) {
-            progressBar.style.background = 'linear-gradient(90deg, #ffaa00, #ff6600, #cc4400)';
-            progressBar.style.boxShadow = '0 0 20px rgba(255, 170, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+            progressBar.classList.add('time-progress-bar--mid');
         } else {
-            progressBar.style.background = 'linear-gradient(90deg, #FFD700, #FFA500, #FF8C00)';
-            progressBar.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+            progressBar.classList.add('time-progress-bar--ok');
         }
     }
 }
@@ -414,13 +296,13 @@ function spawnPapers() {
     });
 }
 
-setupHUD();
+
 // After creating progressContainer, add this:
 //progressContainer.style.opacity = '1.0'; // Keep progress bar fully visible
 spawnPapers();
 
 // === Load Environment ===
-const loader = new GLTFLoader();
+const loader = new GLTFLoader(manager);
 let environment, obstacles = [], teleportTarget;
 
 loader.load("/models/Gamestates.glb", (gltf) => {
@@ -522,11 +404,67 @@ function teleportToMiniChallenge() {
      
      // add a intermediary loading screen so a diff html load screen that loads and when it gets to 100% 
      // olnyu then do we load carcross
-     window.location.href = "http://localhost:5173/carcross.html";
+    // Stop game time/loop immediately during transition
+    gamePaused = true;
+    gameStarted = false;
+    gameEnded = true;
+    animatee = false;
+
+    loadCarcross(() => {
+        // This callback runs after progress reaches 100%
+       
+    });
+}
+function loadCarcross() {
+    // === Overlay container ===
+    const overlay = document.createElement('div');
+    overlay.id = 'loadingCC-overlay';
+    overlay.className = 'loading-overlay'; // reuse CSS styles
+
+    // === Image ===
+    const img = document.createElement('img');
+    img.id = 'loadingCC-image';
+    img.src = '/models/carcross.png'; // replace with your Carcross image path
+    img.alt = 'Carcross Loading';
+    overlay.appendChild(img);
+
+    // === Progress bar container ===
+    const progressContainer = document.createElement('div');
+    progressContainer.id = 'loadingCC-progress-container';
+    progressContainer.className = 'loading-progress-container';
+    overlay.appendChild(progressContainer);
+
+    // === Progress bar fill ===
+    const progressBar = document.createElement('div');
+    progressBar.id = 'loadingCC-progress-bar';
+    progressBar.className = 'loading-progress-bar';
+    progressContainer.appendChild(progressBar);
+
+    document.body.appendChild(overlay);
+
+    // === Simulated progress (editable duration) ===
+    let simulatedProgress = 0;
+    const loadDuration = 10000; // 3 seconds
+    const step = 50; // ms per update
+
+    const interval = setInterval(() => {
+        simulatedProgress += (step / loadDuration) * 100;
+        if (simulatedProgress >= 100) simulatedProgress = 100;
+        progressBar.style.width = `${simulatedProgress}%`;
+
+        if (simulatedProgress >= 100) {
+            clearInterval(interval);
+            overlay.style.opacity = 0;
+            setTimeout(() => overlay.remove(), 500);
+            // Call the next step after loading completes
+             window.location.href = "http://localhost:5173/carcross.html";
+        }
+    }, step);
 }
 
 // === Animate Loop ===
 function animate() {
+    if (!animatee) return;
     requestAnimationFrame(animate);
 
     const delta = clock.getDelta();
@@ -547,7 +485,8 @@ function animate() {
             timeMsLeft = 0;
             gameEnded = true;
             gameStarted = false;
-            showMessage('Time is up!');
+            showTimesUp()
+            //showMessage('Time is up!');
         }
         updateHUD();
     }
@@ -563,3 +502,24 @@ window.addEventListener("resize", () => {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+// ===== function times up overlay ==
+function showTimesUp(){
+    const overlay = document.createElement('div');
+    overlay.className = 'timesup-overlay';
+    const msg = document.createElement('h1');
+    msg.textContent = 'Times Up!';
+    overlay.appendChild(msg);
+    restart(overlay);
+    document.body.append(overlay);
+   
+
+}
+
+function restart(attachment){
+    const btn = document.createElement('button');
+    btn.className = 'restart-btn';
+    btn.textContent = 'Restart';
+    btn.onclick = () => location.reload();
+    attachment.appendChild(btn);
+}
