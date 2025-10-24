@@ -3,6 +3,43 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CharacterControls } from './characterControls.js';
 
+// --- Mouse Look ---
+let mouseSensitivity = 0.002;
+let yaw = 0;
+let pitch = 0;
+let isMouseActive = false;
+
+document.addEventListener('mousedown', () => {
+    isMouseActive = true;
+});
+
+document.addEventListener('mouseup', () => {
+    isMouseActive = false;
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (isFirstPerson && isMouseActive) {
+        yaw -= e.movementX * mouseSensitivity;
+        pitch -= e.movementY * mouseSensitivity;
+        pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+
+        // Apply rotation to character + camera
+        if (characterModel) {
+            // Rotate the character left/right (yaw)
+            characterModel.rotation.y = yaw;
+        
+            // Apply pitch as a quaternion rotation to the camera
+            const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
+            const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+        
+            const finalQuat = new THREE.Quaternion().multiplyQuaternions(qYaw, qPitch);
+            camera.quaternion.copy(finalQuat);
+        }
+        
+    }
+});
+
+
 // === Scene Setup ===
 const scene = new THREE.Scene();
 
@@ -21,6 +58,10 @@ const clock = new THREE.Clock();
 const keysPressed = {};
 document.addEventListener("keydown", e => keysPressed[e.key.toLowerCase()] = true);
 document.addEventListener("keyup", e => keysPressed[e.key.toLowerCase()] = false);
+
+// Camera mode toggle
+let isFirstPerson = false;
+const CAMERA_TOGGLE_KEY = 'v'; // Press V to toggle camera mode
 
 // OrbitControls (debug)
 const orbitControls = new OrbitControls(camera, renderer.domElement);
@@ -81,10 +122,66 @@ function positionCharacterOnPlane() {
         console.log("Plane bounding box:", bbox);
         console.log("Character Y position:", yPosition);
         
-        // Position camera behind and above the character
-        camera.position.set(0, yPosition + 2, 5);
-        console.log("Camera positioned at:", camera.position);
+        // Position camera based on current mode
+        updateCameraPosition();
     }
+}
+
+// Function to update camera position based on current mode
+function updateCameraPosition() {
+    if (!characterModel) return;
+
+    const headHeight = 1.6; // Eye height
+    const offsetBehind = new THREE.Vector3(0, 2, 5);
+
+    if (isFirstPerson) {
+        // Detach first to prevent transform conflicts
+        scene.attach(camera);
+
+        // Find character’s world rotation
+        const charWorldQuat = new THREE.Quaternion();
+        characterModel.getWorldQuaternion(charWorldQuat);
+
+        // Compute eye position in world space
+        const charPos = new THREE.Vector3();
+        characterModel.getWorldPosition(charPos);
+        const eyeOffset = new THREE.Vector3(0, headHeight, 0).applyQuaternion(charWorldQuat);
+        const cameraPos = charPos.clone().add(eyeOffset);
+
+        camera.position.copy(cameraPos);
+        camera.quaternion.copy(charWorldQuat);
+
+        // Disable orbit and attach smooth rotation control
+        orbitControls.enabled = false;
+    } else {
+        // Third-person mode
+        scene.attach(camera);
+
+        const charPos = new THREE.Vector3();
+        characterModel.getWorldPosition(charPos);
+
+        // Offset behind and above the character
+        const offset = offsetBehind.clone().applyQuaternion(characterModel.quaternion);
+        camera.position.copy(charPos.clone().add(offset));
+
+        camera.lookAt(charPos);
+        orbitControls.enabled = true;
+    }
+}
+
+
+
+// Function to toggle camera mode
+function toggleCameraMode() {
+    isFirstPerson = !isFirstPerson;
+    updateCameraPosition();
+    
+    // Update character controls with new camera mode
+    if (characterControls) {
+        characterControls.setFirstPersonMode(isFirstPerson);
+    }
+    
+    console.log(`Switched to ${isFirstPerson ? 'first' : 'third'} person view`);
 }
 
 // === Load Soldier Character ===
@@ -115,6 +212,13 @@ loader.load("/models/Soldier.glb", (gltf) => {
     characterControls = new CharacterControls(model, mixer, animationsMap, orbitControls, camera, "Idle");
 });
 
+// Add keyboard event listener for camera toggle
+document.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === CAMERA_TOGGLE_KEY) {
+        toggleCameraMode();
+    }
+});
+
 // === Animation Loop ===
 function animate() {
     requestAnimationFrame(animate);
@@ -123,6 +227,11 @@ function animate() {
 
     if (characterControls) {
         characterControls.update(delta, keysPressed);
+        
+        // Update camera position in first-person mode
+        // if (isFirstPerson && characterModel) {
+        //     updateCameraPosition();
+        // }
     }
 
     orbitControls.update();

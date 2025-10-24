@@ -1,10 +1,9 @@
 import * as THREE from 'three';
 
 export class CharacterControls {
-
     model;
     mixer;
-    animationsMap = new Map(); // Walk, Run, Idle
+    animationsMap = new Map();
     orbitControl;
     camera;
 
@@ -13,7 +12,7 @@ export class CharacterControls {
 
     walkDirection = new THREE.Vector3();
     rotateAngle = new THREE.Vector3(0, 1, 0);
-    rotateQuarternion = new THREE.Quaternion();
+    rotateQuaternion = new THREE.Quaternion();
     baseOrientation = new THREE.Quaternion();
     cameraTarget = new THREE.Vector3();
 
@@ -35,10 +34,15 @@ export class CharacterControls {
         this.camera = camera;
         this.upAxis = upAxis;
         this.modelForwardOffsetRadians = forwardOffsetRadians;
-        // Ensure yaw rotation happens around the correct up axis and store base orientation
-        this.rotateAngle = (this.upAxis === 'Z') ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0);
+        this.rotateAngle = (this.upAxis === 'Z')
+            ? new THREE.Vector3(0, 0, 1)
+            : new THREE.Vector3(0, 1, 0);
+
         this.baseOrientation.copy(this.model.quaternion);
         this.updateCameraTarget(0, 0);
+
+        // Add first-person mode flag
+        this.isFirstPerson = false;
     }
 
     switchRunToggle() {
@@ -65,59 +69,97 @@ export class CharacterControls {
 
         this.mixer.update(delta);
 
+        // movement
         if (this.currentAction === 'Run' || this.currentAction === 'Walk') {
-            const dx = this.camera.position.x - this.model.position.x;
-            const dzOrDy = this.upAxis === 'Z' ?
-                (this.camera.position.y - this.model.position.y) :
-                (this.camera.position.z - this.model.position.z);
-            const angleYCameraDirection = Math.atan2(dx, dzOrDy);
 
             const directionOffset = this.directionOffset(keysPressed);
-
-            const yawQuat = new THREE.Quaternion().setFromAxisAngle(this.rotateAngle, angleYCameraDirection + directionOffset + this.modelForwardOffsetRadians);
-            const targetQuat = new THREE.Quaternion().copy(yawQuat).multiply(this.baseOrientation);
-            this.model.quaternion.rotateTowards(targetQuat, 0.2);
-
-            // Get camera forward projected onto ground plane (Z-up => XY plane)
-            this.camera.getWorldDirection(this.walkDirection);
-            if (this.upAxis === 'Z') {
-                // Zero vertical component and renormalize
-                this.walkDirection.z = 0;
-            } else {
-                this.walkDirection.y = 0;
-            }
-            this.walkDirection.normalize();
-            this.walkDirection.applyAxisAngle(this.rotateAngle, directionOffset);
-
             const velocity = this.currentAction === 'Run' ? this.runVelocity : this.walkVelocity;
 
-            const moveX = this.walkDirection.x * velocity * delta;
-            const moveT = (this.upAxis === 'Z' ? this.walkDirection.y : this.walkDirection.z) * velocity * delta;
-            this.model.position.x += moveX;
-            if (this.upAxis === 'Z') this.model.position.y += moveT; else this.model.position.z += moveT;
+            // ========== THIRD PERSON ==========
+            if (!this.isFirstPerson) {
 
-            this.updateCameraTarget(moveX, moveT);
+                const dx = this.camera.position.x - this.model.position.x;
+                const dzOrDy = this.upAxis === 'Z'
+                    ? (this.camera.position.y - this.model.position.y)
+                    : (this.camera.position.z - this.model.position.z);
+                const angleYCameraDirection = Math.atan2(dx, dzOrDy);
+
+                const yawQuat = new THREE.Quaternion()
+                    .setFromAxisAngle(this.rotateAngle, angleYCameraDirection + directionOffset + this.modelForwardOffsetRadians);
+                const targetQuat = new THREE.Quaternion().copy(yawQuat).multiply(this.baseOrientation);
+                this.model.quaternion.rotateTowards(targetQuat, 0.2);
+
+                // Move along camera forward direction
+                this.camera.getWorldDirection(this.walkDirection);
+                if (this.upAxis === 'Z') this.walkDirection.z = 0;
+                else this.walkDirection.y = 0;
+                this.walkDirection.normalize();
+                this.walkDirection.applyAxisAngle(this.rotateAngle, directionOffset);
+
+                const moveX = this.walkDirection.x * velocity * delta;
+                const moveT = (this.upAxis === 'Z' ? this.walkDirection.y : this.walkDirection.z) * velocity * delta;
+                this.model.position.x += moveX;
+                if (this.upAxis === 'Z') this.model.position.y += moveT; else this.model.position.z += moveT;
+
+                this.updateCameraTarget(moveX, moveT);
+            }
+
+            // ========== FIRST PERSON ==========
+            else {
+                // In first-person, move along camera direction directly
+                const moveDir = new THREE.Vector3();
+                this.camera.getWorldDirection(moveDir);
+
+                // Flatten to ground plane
+                if (this.upAxis === 'Z') moveDir.z = 0;
+                else moveDir.y = 0;
+                moveDir.normalize();
+
+                // Adjust direction for strafing
+                const right = new THREE.Vector3();
+                right.crossVectors(this.camera.up, moveDir).normalize();
+
+                const finalDir = new THREE.Vector3();
+                if (keysPressed['w']) finalDir.add(moveDir);
+                if (keysPressed['s']) finalDir.sub(moveDir);
+                if (keysPressed['a']) finalDir.add(right);
+                if (keysPressed['d']) finalDir.sub(right);
+                finalDir.normalize();
+
+                this.model.position.addScaledVector(finalDir, velocity * delta);
+
+                // Make model match camera rotation (yaw only)
+                const euler = new THREE.Euler(0, this.camera.rotation.y, 0, 'YXZ');
+                this.model.quaternion.setFromEuler(euler);
+            }
         }
     }
 
     updateCameraTarget(moveX, moveT) {
-        this.camera.position.x += moveX;
-        if (this.upAxis === 'Z') this.camera.position.y += moveT; else this.camera.position.z += moveT;
+        // Only move camera in third-person mode
+        if (!this.isFirstPerson) {
+            this.camera.position.x += moveX;
+            if (this.upAxis === 'Z') this.camera.position.y += moveT;
+            else this.camera.position.z += moveT;
 
-        this.cameraTarget.x = this.model.position.x;
-        if (this.upAxis === 'Z') {
-            this.cameraTarget.y = this.model.position.y;
-            this.cameraTarget.z = this.model.position.z + 1.6;
-        } else {
-            this.cameraTarget.y = this.model.position.y + 1.6;
-            this.cameraTarget.z = this.model.position.z;
+            this.cameraTarget.x = this.model.position.x;
+            if (this.upAxis === 'Z') {
+                this.cameraTarget.y = this.model.position.y;
+                this.cameraTarget.z = this.model.position.z + 1.6;
+            } else {
+                this.cameraTarget.y = this.model.position.y + 1.6;
+                this.cameraTarget.z = this.model.position.z;
+            }
+            this.orbitControl.target.copy(this.cameraTarget);
         }
-        this.orbitControl.target.copy(this.cameraTarget);
+    }
+
+    setFirstPersonMode(isFirstPerson) {
+        this.isFirstPerson = isFirstPerson;
     }
 
     directionOffset(keysPressed) {
         let directionOffset = 0;
-
         if (keysPressed['w']) {
             if (keysPressed['a']) directionOffset = Math.PI / 4;
             else if (keysPressed['d']) directionOffset = -Math.PI / 4;
