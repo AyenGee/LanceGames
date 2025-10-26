@@ -10,6 +10,131 @@ let gameStarted = false;
 // === LOADING SCREEN (CSS-driven) ===
 let loadingOverlay;
 let progressBar;
+
+// (Add this function)
+/**
+ * Injects CSS for the fullscreen video intro overlay.
+ */
+function injectVideoIntroStyles() {
+    if (document.getElementById('video-intro-styles')) return;
+    const css = `
+        #video-intro-overlay {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 10000; /* On top of everything */
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1;
+            transition: opacity 400ms ease-out;
+        }
+        #video-intro-overlay video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Fill the screen */
+        }
+        #video-intro-overlay .skip-btn {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            z-index: 10001;
+            padding: 10px 18px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
+            cursor: pointer;
+            backdrop-filter: blur(3px);
+            opacity: 0.7;
+            transition: all 200ms ease;
+        }
+        #video-intro-overlay .skip-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            opacity: 1;
+        }
+    `;
+    const style = document.createElement('style');
+    style.id = 'video-intro-styles';
+    style.textContent = css;
+    document.head.appendChild(style);
+}
+
+// (Add this function)
+/**
+ * Creates and plays a fullscreen intro video.
+ * @param {string} videoSrc - The path to the video file.
+ * e.g., '/videos/my-intro.mp4'
+ * @param {function} onComplete - Callback function to run when
+ * video ends or is skipped.
+ */
+function playIntroVideo(videoSrc, onComplete) {
+    injectVideoIntroStyles(); // Make sure styles are loaded
+
+    const overlay = document.createElement('div');
+    overlay.id = 'video-intro-overlay';
+
+    const video = document.createElement('video');
+    video.src = videoSrc;
+    video.muted = true;   // REQUIRED for autoplay in all modern browsers
+    video.autoplay = true;
+    video.playsInline = true; // Good for mobile
+    overlay.appendChild(video);
+
+    const skipBtn = document.createElement('button');
+    skipBtn.textContent = 'Skip Intro';
+    skipBtn.className = 'skip-btn';
+    overlay.appendChild(skipBtn);
+
+    let isCleanedUp = false;
+    function cleanup() {
+        if (isCleanedUp) return;
+        isCleanedUp = true;
+        
+        video.pause();
+        overlay.style.opacity = '0'; // Fade out
+        
+        // Wait for fade-out, then remove and call next step
+        overlay.addEventListener('transitionend', () => {
+            overlay.remove();
+            if (onComplete) onComplete();
+        }, { once: true });
+        
+        // Fallback if transition event doesn't fire
+        setTimeout(() => {
+            if (overlay.isConnected) overlay.remove();
+            if (onComplete) onComplete();
+        }, 500); // 500ms > 400ms transition
+    }
+
+    // --- Event Listeners ---
+    skipBtn.addEventListener('click', cleanup, { once: true });
+    video.addEventListener('ended', cleanup, { once: true });
+    
+    // Handle cases where video fails to load
+    video.addEventListener('error', (e) => {
+        console.error("Intro video failed to load or play:", e);
+        cleanup(); // Skip it and move on
+    }, { once: true });
+
+    // --- Add to DOM and Play ---
+    document.body.appendChild(overlay);
+    
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+        playPromise.catch(error => {
+            // Autoplay was prevented (e.g., browser policy)
+            console.warn("Video autoplay was prevented. Skipping intro.", error);
+            // Don't show a broken player; just skip to the start screen.
+            overlay.remove(); // Remove immediately
+            if (onComplete) onComplete();
+        });
+    }
+}
+
 function createLoadingUI() {
   loadingOverlay = document.createElement('div');
   loadingOverlay.id = 'loading-screen';
@@ -39,6 +164,213 @@ function createLoadingUI() {
 
 createLoadingUI();
 
+/**
+ * Creates the start screen DOM (same structure as your HTML).
+ * - Ensures #app exists.
+ * - Replaces any existing #start-screen.
+ * - Returns refs and tiny helpers.
+ */
+// Inject start-screen styles once (runtime)
+function injectStartScreenStyles() {
+  if (document.getElementById('start-screen-styles')) return;
+
+  const css = `
+  html, body, #app { height: 100%; }
+  html, body { margin: 0; }
+
+  #start-screen.overlay {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10,10,13,0.8);
+    backdrop-filter: blur(2px);
+    opacity: 1;
+    transition: opacity 300ms ease;
+  }
+  #start-screen.overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #start-screen .panel {
+    width: min(92vw, 560px);
+    padding: 28px 32px;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.45);
+    background: linear-gradient(180deg, #1b1f2a, #0f1218);
+    color: #fff;
+    text-align: center;
+  }
+
+  #start-screen .title {
+    margin: 0 0 8px;
+    font-size: clamp(28px, 4vw, 40px);
+    letter-spacing: 0.5px;
+  }
+  #start-screen .subtitle {
+    margin: 0 0 24px;
+    opacity: 0.9;
+  }
+
+  #start-screen .btn {
+    display: inline-block;
+    margin: 6px 0 14px;
+    padding: 12px 22px;
+    font-size: 16px;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    background: #ffd400;
+    color: #111;
+  }
+
+  #start-screen .row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #start-screen .link {
+    background: none;
+    border: none;
+    color: #9cc8ff;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  `;
+
+  const style = document.createElement('style');
+  style.id = 'start-screen-styles';
+  style.textContent = css;
+  document.head.appendChild(style);
+}
+
+/**
+ * Creates the start screen DOM and injects CSS at runtime.
+ */
+export function createStartScreen() {
+  injectStartScreenStyles(); // <-- ensure styles exist
+
+  // Ensure #app exists
+  let app = document.getElementById('app');
+  if (!app) {
+    app = document.createElement('div');
+    app.id = 'app';
+    document.body.appendChild(app);
+  }
+
+  // Remove any existing start screen
+  const existing = document.getElementById('start-screen');
+  if (existing) existing.remove();
+
+  // Build DOM
+  const startScreen = document.createElement('div');
+  startScreen.id = 'start-screen';
+  startScreen.className = 'overlay';
+
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+
+  const h1 = document.createElement('h1');
+  h1.className = 'Lance: Trapped in Wits';
+  h1.textContent = 'Lance: Trapped in Wits';
+
+  const p = document.createElement('p');
+  p.className = 'subtitle';
+  p.textContent = 'Press Play to begin';
+
+  const playBtn = document.createElement('button');
+  playBtn.id = 'play-btn';
+  playBtn.className = 'btn';
+  playBtn.textContent = 'Play';
+
+  const row = document.createElement('div');
+  row.className = 'row';
+
+  const label = document.createElement('label');
+  const mute = document.createElement('input');
+  mute.id = 'mute';
+  mute.type = 'checkbox';
+  mute.checked = true;
+  label.appendChild(mute);
+  label.appendChild(document.createTextNode(' Mute'));
+
+  const settings = document.createElement('button');
+  settings.id = 'settings';
+  settings.className = 'link';
+  settings.textContent = 'Settings';
+
+  row.appendChild(label);
+  row.appendChild(settings);
+
+  panel.appendChild(h1);
+  panel.appendChild(p);
+  panel.appendChild(playBtn);
+  panel.appendChild(row);
+  startScreen.appendChild(panel);
+  app.appendChild(startScreen);
+  document.body.appendChild(startScreen);
+
+  // Helpers: show/hide + keyboard
+  const show = () => {
+    startScreen.classList.remove('hidden');
+    document.body.style.overflow = 'hidden'; // lock scroll while visible
+  };
+  const hide = () => {
+    startScreen.classList.add('hidden');
+    document.body.style.overflow = ''; // restore scroll
+  };
+
+  const onKey = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      playBtn.click();
+    }
+  };
+  startScreen.addEventListener('transitionend', () => {
+    if (!startScreen.isConnected) document.removeEventListener('keydown', onKey);
+  });
+
+  return {
+    root: startScreen,
+    panel,
+    playBtn,
+    mute,
+    settings,
+    show,
+    hide,
+    enableKeyboardStart() { document.addEventListener('keydown', onKey); },
+    disableKeyboardStart() { document.removeEventListener('keydown', onKey); },
+  };
+}
+
+
+function showStartScreenAfterLoad() {
+  const { root, playBtn, show, hide, enableKeyboardStart, disableKeyboardStart } = createStartScreen();
+
+  // Reveal the start screen and allow Enter/Space to trigger Play
+  show();
+  enableKeyboardStart();
+
+  const begin = () => {
+    disableKeyboardStart();
+    hide();          // for CSS transition if you use it
+    root.remove();   // remove the start screen DOM
+    setupStartOverlay(); // <-- NOW show your “PLAY to begin challenge” overlay
+  };
+
+  // One-time start
+  playBtn.addEventListener('click', begin, { once: true });
+}
+
+
+//createStartScreen();
 
 // === THREE.js Loading Manager ===
 const manager = new THREE.LoadingManager();
@@ -57,13 +389,18 @@ manager.onLoad = function () {
   if (!loadingOverlay) return;
   const elapsed = loadStart ? (performance.now() - loadStart) : MIN_LOAD_MS;
   const delay = Math.max(0, MIN_LOAD_MS - elapsed);
+
   setTimeout(() => {
+    // Fade out/remove the loader
     loadingOverlay.classList.add('is-hidden');
     setTimeout(() => loadingOverlay.remove(), 500);
-    setupStartOverlay()
+
+    // 👉 Show Start Screen first; only after clicking Play do we call setupStartOverlay()
+    playIntroVideo('./assets/intro.mp4',showStartScreenAfterLoad);
+    //showStartScreenAfterLoad();
   }, delay);
-  
 };
+
 let animatee = true;
 
 // Load sky texture as background
@@ -163,7 +500,7 @@ let timeMsTotal = 20*1000; //
 let timeMsLeft = timeMsTotal;
 let gameEnded = false;
 let gamePaused = false;
-function setupHUD() {
+export function setupHUD() {
     // Main HUD container
     hudEl = document.createElement('div');
     hudEl.className = 'hud';
@@ -220,13 +557,68 @@ function setupHUD() {
         gamePaused = false;
     });
 
+    const ctrlBtn = document.createElement('button');
+    ctrlBtn.className = 'ctrl-btn';
+    ctrlBtn.textContent = 'CONTROLS';
+    ctrlBtn.textContent = '⌨ CONTROLS';
+
+    const controlsPanel = document.createElement('div');
+    controlsPanel.id = 'controls-panel';
+    controlsPanel.className = 'controls-panel is-hidden';
+    controlsPanel.setAttribute('role', 'dialog');
+    controlsPanel.setAttribute('aria-modal', 'false');
+    controlsPanel.innerHTML = `
+        <div class="controls-panel__header">
+            <strong>Game Controls</strong>
+            <button class="controls-panel__close" aria-label="Close controls">✕</button>
+        </div>
+        <ul class="controls-panel__list">
+            <li><kbd>W/A/S/D</kbd> or <kbd>Arrow Keys</kbd> — Move</li>
+            <li><kbd>Space</kbd> — Action / Interact</li>
+            <li><kbd>Shift</kbd> — Sprint</li>
+            <li><kbd>P</kbd> — Pause</li>
+            <li><kbd>M</kbd> — Mute/Unmute</li>
+            <li><kbd>?</kbd> — Toggle Controls</li>
+        </ul>
+    `;
+
+    const closeBtn = controlsPanel.querySelector('.controls-panel__close');
+   /* const toggleControls = (forceState) => {
+        const isHidden = controlsPanel.classList.contains('is-hidden');
+        const shouldOpen = typeof forceState === 'boolean' ? forceState : isHidden;
+        controlsPanel.classList.toggle('is-hidden', !shouldOpen);
+        ctrlBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    };*/
+
+    ctrlBtn.addEventListener('click', () =>{
+        controlsPanel.hidden = false;
+    } )
+
+    closeBtn.addEventListener('click', () => {
+        if(controlsPanel.hidden === false){
+            controlsPanel.hidden = true;
+        }else{
+            controlsPanel.hidden = false;
+        }
+
+    });
+    //closeBtn.addEventListener('click', () => toggleControls(false));
+    document.addEventListener('keydown', (e) => {
+        if (e.key === '?' || (e.shiftKey && e.key === '/')) toggleControls();
+        if (e.key === 'Escape') toggleControls(false);
+    });
+
     controlsRow.appendChild(playBtn);
     controlsRow.appendChild(pauseBtn);
+    controlsRow.appendChild(ctrlBtn);
+
+    
 
     // Assemble HUD
     hudEl.appendChild(progressContainer);
     hudEl.appendChild(mainContentRow);
     hudEl.appendChild(controlsRow);
+    hudEl.appendChild(controlsPanel);
     document.body.appendChild(hudEl);
     updateHUD();
 }
@@ -241,7 +633,7 @@ function formatTime(ms) {
 
 
 
-function updateHUD() {
+export function updateHUD() {
    
 
     // Update reports counter
