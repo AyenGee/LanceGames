@@ -3,44 +3,20 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CharacterControls } from './characterControls.js';
 
-// --- Mouse Look ---
+// === MOUSE LOOK SETTINGS ===
 let mouseSensitivity = 0.002;
 let yaw = 0;
 let pitch = 0;
-let isMouseActive = false;
 
-document.addEventListener('mousedown', () => {
-    isMouseActive = true;
+// Pointer Lock for immersive mouse look
+document.body.addEventListener('click', () => {
+    renderer?.domElement.requestPointerLock();
+});
+document.addEventListener('pointerlockchange', () => {
+    // No need for isMouseActive flag
 });
 
-document.addEventListener('mouseup', () => {
-    isMouseActive = false;
-});
-
-document.addEventListener('mousemove', (e) => {
-    if (isFirstPerson && isMouseActive) {
-        yaw -= e.movementX * mouseSensitivity;
-        pitch -= e.movementY * mouseSensitivity;
-        pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
-
-        // Apply rotation to character + camera
-        if (characterModel) {
-            // Rotate the character left/right (yaw)
-            characterModel.rotation.y = yaw;
-        
-            // Apply pitch as a quaternion rotation to the camera
-            const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
-            const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-        
-            const finalQuat = new THREE.Quaternion().multiplyQuaternions(qYaw, qPitch);
-            camera.quaternion.copy(finalQuat);
-        }
-        
-    }
-});
-
-
-// === Scene Setup ===
+// === SCENE SETUP ===
 const scene = new THREE.Scene();
 
 // Camera
@@ -53,17 +29,22 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
-// Clock and key handling
+// Clock and key input
 const clock = new THREE.Clock();
 const keysPressed = {};
 document.addEventListener("keydown", e => keysPressed[e.key.toLowerCase()] = true);
 document.addEventListener("keyup", e => keysPressed[e.key.toLowerCase()] = false);
 
-// Camera mode toggle
+// Camera mode toggle (V key)
 let isFirstPerson = false;
-const CAMERA_TOGGLE_KEY = 'v'; // Press V to toggle camera mode
+const CAMERA_TOGGLE_KEY = 'v';
 
-// OrbitControls (debug)
+// First-person camera settings
+const moveSpeed = 5.0;
+const savedCameraPosition = new THREE.Vector3();
+const savedCameraRotation = new THREE.Euler();
+
+// Orbit controls (third-person mode)
 const orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.enableDamping = true;
 
@@ -76,14 +57,14 @@ light.shadow.mapSize.height = 2048;
 scene.add(light);
 scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 
-// Load sky texture as background
+// Background
 const textureLoader = new THREE.TextureLoader();
 textureLoader.load('/models/sky.jpeg', (texture) => {
-    texture.encoding = THREE.sRGBEncoding; 
+    texture.encoding = THREE.sRGBEncoding;
     scene.background = texture;
 });
 
-// === Load West Environment ===
+// === LOAD ENVIRONMENT ===
 const loader = new GLTFLoader();
 let environment;
 let planeObject = null;
@@ -93,98 +74,21 @@ loader.load("/models/west.glb", (gltf) => {
     environment = gltf.scene;
     scene.add(environment);
 
-    // Find the Plane object and enable shadows
     environment.traverse((child) => {
         if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
-            
-            // Find the Plane object
+
             if (child.name === "Plane") {
                 planeObject = child;
                 console.log("Found Plane object:", child);
-                
-                // If character is already loaded, position it now
-                if (characterModel) {
-                    positionCharacterOnPlane();
-                }
+                if (characterModel) positionCharacterOnPlane();
             }
         }
     });
 });
 
-// Function to position character on plane
-function positionCharacterOnPlane() {
-    if (characterModel && planeObject) {
-        const bbox = new THREE.Box3().setFromObject(planeObject);
-        const yPosition = bbox.max.y + 0.1; // Position slightly above the plane surface
-        characterModel.position.y = yPosition;
-        console.log("Plane bounding box:", bbox);
-        console.log("Character Y position:", yPosition);
-        
-        // Position camera based on current mode
-        updateCameraPosition();
-    }
-}
-
-// Function to update camera position based on current mode
-function updateCameraPosition() {
-    if (!characterModel) return;
-
-    const headHeight = 1.6; // Eye height
-    const offsetBehind = new THREE.Vector3(0, 2, 5);
-
-    if (isFirstPerson) {
-        // Detach first to prevent transform conflicts
-        scene.attach(camera);
-
-        // Find character’s world rotation
-        const charWorldQuat = new THREE.Quaternion();
-        characterModel.getWorldQuaternion(charWorldQuat);
-
-        // Compute eye position in world space
-        const charPos = new THREE.Vector3();
-        characterModel.getWorldPosition(charPos);
-        const eyeOffset = new THREE.Vector3(0, headHeight, 0).applyQuaternion(charWorldQuat);
-        const cameraPos = charPos.clone().add(eyeOffset);
-
-        camera.position.copy(cameraPos);
-        camera.quaternion.copy(charWorldQuat);
-
-        // Disable orbit and attach smooth rotation control
-        orbitControls.enabled = false;
-    } else {
-        // Third-person mode
-        scene.attach(camera);
-
-        const charPos = new THREE.Vector3();
-        characterModel.getWorldPosition(charPos);
-
-        // Offset behind and above the character
-        const offset = offsetBehind.clone().applyQuaternion(characterModel.quaternion);
-        camera.position.copy(charPos.clone().add(offset));
-
-        camera.lookAt(charPos);
-        orbitControls.enabled = true;
-    }
-}
-
-
-
-// Function to toggle camera mode
-function toggleCameraMode() {
-    isFirstPerson = !isFirstPerson;
-    updateCameraPosition();
-    
-    // Update character controls with new camera mode
-    if (characterControls) {
-        characterControls.setFirstPersonMode(isFirstPerson);
-    }
-    
-    console.log(`Switched to ${isFirstPerson ? 'first' : 'third'} person view`);
-}
-
-// === Load Soldier Character ===
+// === LOAD CHARACTER ===
 let characterControls;
 
 loader.load("/models/Soldier.glb", (gltf) => {
@@ -192,18 +96,11 @@ loader.load("/models/Soldier.glb", (gltf) => {
     model.scale.set(2, 2, 2);
     model.castShadow = true;
     scene.add(model);
-    
-    // Store reference to character model
+
     characterModel = model;
 
-    // Try to position character on plane if environment is already loaded
-    if (planeObject) {
-        positionCharacterOnPlane();
-    } else {
-        // Fallback: use a higher Y position
-        model.position.set(0, 2, 3);
-        console.log("Environment not loaded yet, using fallback Y position");
-    }
+    if (planeObject) positionCharacterOnPlane();
+    else model.position.set(0, 2, 3);
 
     const mixer = new THREE.AnimationMixer(model);
     const animationsMap = new Map();
@@ -212,35 +109,140 @@ loader.load("/models/Soldier.glb", (gltf) => {
     characterControls = new CharacterControls(model, mixer, animationsMap, orbitControls, camera, "Idle");
 });
 
-// Add keyboard event listener for camera toggle
-document.addEventListener("keydown", (e) => {
-    if (e.key.toLowerCase() === CAMERA_TOGGLE_KEY) {
-        toggleCameraMode();
+// === POSITION CHARACTER ON GROUND ===
+function positionCharacterOnPlane() {
+    if (characterModel && planeObject) {
+        const bbox = new THREE.Box3().setFromObject(planeObject);
+        const yPosition = bbox.max.y + 0.1;
+        characterModel.position.y = yPosition;
+    }
+}
+
+// === TOGGLE CAMERA MODE ===
+function toggleCameraMode() {
+    isFirstPerson = !isFirstPerson;
+
+    if (isFirstPerson) {
+        // Switch to first-person mode
+        if (characterModel) {
+            // Save character position and rotation
+            const charPos = new THREE.Vector3();
+            characterModel.getWorldPosition(charPos);
+            
+            // Position camera at character's head height
+            camera.position.copy(charPos);
+            camera.position.y += 2.5; // Head height
+            
+            // Set camera rotation to match character
+            yaw = characterModel.rotation.y;
+            pitch = 0;
+            
+            // Hide character
+            characterModel.visible = false;
+        }
+        
+        // Disable orbit controls
+        orbitControls.enabled = false;
+        
+        console.log('Switched to first-person view (free camera)');
+    } else {
+        // Switch to third-person mode
+        if (characterModel) {
+            // Position character at camera's current position
+            characterModel.position.copy(camera.position);
+            characterModel.position.y = planeObject ? 
+                new THREE.Box3().setFromObject(planeObject).max.y + 0.1 : 0;
+            
+            // Set character rotation to match camera yaw
+            characterModel.rotation.y = yaw;
+            
+            // Show character
+            characterModel.visible = true;
+            
+            // Position camera behind character
+            const offset = new THREE.Vector3(0, 2, 5);
+            offset.applyQuaternion(characterModel.quaternion);
+            camera.position.copy(characterModel.position.clone().add(offset));
+            camera.lookAt(characterModel.position);
+        }
+        
+        // Enable orbit controls
+        orbitControls.enabled = true;
+        orbitControls.target.copy(characterModel.position);
+        
+        console.log('Switched to third-person view');
+    }
+}
+
+// === MOUSE LOOK (First-Person Only) ===
+document.addEventListener('mousemove', (e) => {
+    if (isFirstPerson && document.pointerLockElement === renderer.domElement) {
+        yaw -= e.movementX * mouseSensitivity;
+        pitch -= e.movementY * mouseSensitivity;
+        // Clamp pitch to prevent over-rotation
+        pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitch));
     }
 });
 
-// === Animation Loop ===
+// === FIRST-PERSON MOVEMENT ===
+function updateFirstPersonCamera(delta) {
+    if (!isFirstPerson) return;
+    
+    // Apply camera rotation
+    const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+    const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
+    const finalQuat = new THREE.Quaternion();
+    finalQuat.multiplyQuaternions(qYaw, qPitch);
+    camera.quaternion.copy(finalQuat);
+    
+    // WASD Movement
+    const moveVector = new THREE.Vector3();
+    
+    if (keysPressed['w']) moveVector.z -= 1;
+    if (keysPressed['s']) moveVector.z += 1;
+    if (keysPressed['a']) moveVector.x -= 1;
+    if (keysPressed['d']) moveVector.x += 1;
+    
+    // Normalize to prevent faster diagonal movement
+    if (moveVector.length() > 0) {
+        moveVector.normalize();
+        
+        // Apply movement relative to camera direction (only yaw, not pitch)
+        const moveQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+        moveVector.applyQuaternion(moveQuat);
+        moveVector.multiplyScalar(moveSpeed * delta);
+        
+        camera.position.add(moveVector);
+    }
+}
+
+// === ANIMATION LOOP ===
 function animate() {
     requestAnimationFrame(animate);
-
     const delta = clock.getDelta();
 
-    if (characterControls) {
-        characterControls.update(delta, keysPressed);
-        
-        // Update camera position in first-person mode
-        // if (isFirstPerson && characterModel) {
-        //     updateCameraPosition();
-        // }
+    if (isFirstPerson) {
+        // First-person: just update camera
+        updateFirstPersonCamera(delta);
+    } else {
+        // Third-person: update character controls
+        if (characterControls) {
+            characterControls.update(delta, keysPressed);
+        }
+        orbitControls.update();
     }
 
-    orbitControls.update();
     renderer.render(scene, camera);
 }
 
 animate();
 
-// === Window Resize ===
+// === CAMERA TOGGLE EVENT ===
+document.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === CAMERA_TOGGLE_KEY) toggleCameraMode();
+});
+
+// === WINDOW RESIZE ===
 window.addEventListener("resize", () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
