@@ -8,12 +8,24 @@ let mouseSensitivity = 0.002;
 let yaw = 0;
 let pitch = 0;
 
-// Pointer Lock for immersive mouse look
+// Pointer Lock for immersive mouse look (requested only in first-person mode)
 document.body.addEventListener('click', () => {
-    renderer?.domElement.requestPointerLock();
+    if (!renderer) return;
+    // Only attempt pointer lock when in first-person and not already locked
+    if (isFirstPerson && document.pointerLockElement !== renderer.domElement) {
+        try {
+            renderer.domElement.requestPointerLock();
+        } catch (e) {
+            console.warn('Pointer lock request failed:', e);
+        }
+    }
 });
+
 document.addEventListener('pointerlockchange', () => {
-    // No need for isMouseActive flag
+    if (!renderer) return;
+    const locked = document.pointerLockElement === renderer.domElement;
+    // Disable OrbitControls while locked to avoid pointer capture conflicts
+    orbitControls.enabled = !locked && !isFirstPerson ? true : !locked;
 });
 
 // === SCENE SETUP ===
@@ -173,6 +185,8 @@ function toggleCameraMode() {
         
         // Disable orbit controls
         orbitControls.enabled = false;
+        // Request pointer lock on entering first-person
+        try { renderer.domElement.requestPointerLock(); } catch {}
         
         console.log('Switched to first-person view (free camera)');
     } else {
@@ -196,7 +210,10 @@ function toggleCameraMode() {
             camera.lookAt(characterModel.position);
         }
         
-        // Enable orbit controls
+        // Exit pointer lock if active and re-enable orbit controls
+        if (document.pointerLockElement === renderer.domElement) {
+            try { document.exitPointerLock(); } catch {}
+        }
         orbitControls.enabled = true;
         orbitControls.target.copy(characterModel.position);
         

@@ -234,46 +234,112 @@ function setupStartOverlay() {
     setupHUD(); // Make sure HUD is set up when game starts
 }
 //----------------------------------
-
-// === Collectibles: Reports === (Keep your existing related variables and spawnPapers function)
-// ... (paste paperBoxes, papers, reportsCollected, etc., and spawnPapers function here) ...
+// === Collectibles: Reports ===
 const paperBoxes = []; const papers = []; let reportsCollected = 0; const totalReports = 3; let allReportsAnnounced = false;
 function spawnPapers() {
-    const positions = [ new THREE.Vector3(1.2, 1.5, 2.5), new THREE.Vector3(-2.0, 1.5, -1.5), new THREE.Vector3(3.0, 1.5, -3.0), ];
-    const geo = new THREE.PlaneGeometry(0.6, 0.8); const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide });
+    const positions = [ new THREE.Vector3(1.2, 1.5, 2.5), new THREE.Vector3(-2.0, 1.5, -1.5), new THREE.Vector3(3.0, 1.5, -3.0) ];
+    const geo = new THREE.PlaneGeometry(0.6, 0.8);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide });
     positions.slice(0, totalReports).forEach((pos) => {
-        const paper = new THREE.Mesh(geo, mat.clone()); paper.rotation.x = -Math.PI / 2; paper.position.copy(pos);
+        const paper = new THREE.Mesh(geo, mat.clone());
+        paper.rotation.x = -Math.PI / 2;
+        paper.position.copy(pos);
         paper.castShadow = false; paper.receiveShadow = true; paper.userData.collected = false;
-        scene.add(paper); papers.push(paper); paperBoxes.push(new THREE.Box3());
+        scene.add(paper);
+        papers.push(paper);
+        paperBoxes.push(new THREE.Box3());
     });
 }
 //----------------------------------
 
-// === HUD === (Keep your existing HUD variables and setupHUD, formatTime, updateHUD functions)
-// ... (paste hudEl, timeMsTotal, etc., and setupHUD, formatTime, updateHUD functions here) ...
-let hudEl = null; let hudTextEl = null; let pauseBtn = null; let playBtn = null; let timeMsTotal = 20 * 1000; let timeMsLeft = timeMsTotal; let gameEnded = false; let gamePaused = false;
-function setupHUD() {
-    hudEl = document.createElement('div'); hudEl.className = 'hud';
-    const progressContainer = document.createElement('div'); progressContainer.className = 'progress-container';
-    const progressBar = document.createElement('div'); progressBar.id = 'time-progress-bar'; progressBar.className = 'time-progress-bar'; progressContainer.appendChild(progressBar);
-    const mainContentRow = document.createElement('div'); mainContentRow.className = 'main-content-row';
-    const reportsContainer = document.createElement('div'); reportsContainer.className = 'reports-container';
-    const reportsLabel = document.createElement('div'); reportsLabel.className = 'reports-label'; reportsLabel.textContent = 'REPORTS:';
-    const reportsCounter = document.createElement('div'); reportsCounter.id = 'reports-counter'; reportsCounter.className = 'reports-counter';
-    reportsContainer.appendChild(reportsLabel); reportsContainer.appendChild(reportsCounter); mainContentRow.appendChild(reportsContainer);
-    const controlsRow = document.createElement('div'); controlsRow.className = 'controls-row';
-    pauseBtn = document.createElement('button'); pauseBtn.className = 'btn btn--pause'; pauseBtn.textContent = '⏸ PAUSE'; pauseBtn.addEventListener('click', () => { if (!gameStarted || gameEnded) return; gamePaused = true; });
-    playBtn = document.createElement('button'); playBtn.className = 'btn btn--play'; playBtn.textContent = '▶ PLAY'; playBtn.addEventListener('click', () => { if (gameEnded) return; gameStarted = true; gamePaused = false; });
-    const ctrlBtn = document.createElement('button'); ctrlBtn.className = 'ctrl-btn'; ctrlBtn.textContent = '⌨ CONTROLS';
-    const controlsPanel = document.createElement('div'); controlsPanel.id = 'controls-panel'; controlsPanel.className = 'controls-panel is-hidden'; controlsPanel.setAttribute('role', 'dialog'); controlsPanel.setAttribute('aria-modal', 'false');
+// === HUD (rich controls) ===
+let hudEl = null; let hudTextEl = null; let pauseBtn = null; let playBtn = null; let timeMsTotal = 180 * 1000; let timeMsLeft = timeMsTotal; let gameEnded = false; let gamePaused = false;
+export function setupHUD() {
+    // Main HUD container
+    hudEl = document.createElement('div');
+    hudEl.className = 'hud';
+
+    const progressContainer = document.createElement('div');
+    progressContainer.className = 'progress-container';
+
+    // Progress bar (time)
+    const progressBar = document.createElement('div');
+    progressBar.id = 'time-progress-bar';
+    progressBar.className = 'time-progress-bar';
+    progressContainer.appendChild(progressBar);
+
+    // Main content row
+    const mainContentRow = document.createElement('div');
+    mainContentRow.className = 'main-content-row';
+
+    // Reports Tracker
+    const reportsContainer = document.createElement('div');
+    reportsContainer.className = 'reports-container';
+    const reportsLabel = document.createElement('div');
+    reportsLabel.className = 'reports-label';
+    reportsLabel.textContent = 'REPORTS:';
+    const reportsCounter = document.createElement('div');
+    reportsCounter.id = 'reports-counter';
+    reportsCounter.className = 'reports-counter';
+    reportsContainer.appendChild(reportsLabel);
+    reportsContainer.appendChild(reportsCounter);
+    mainContentRow.appendChild(reportsContainer);
+
+    // Controls container
+    const controlsRow = document.createElement('div');
+    controlsRow.className = 'controls-row';
+
+    // Pause Button
+    pauseBtn = document.createElement('button');
+    pauseBtn.className = 'btn btn--pause';
+    pauseBtn.textContent = '⏸ PAUSE';
+    pauseBtn.addEventListener('click', () => {
+        if (!gameStarted || gameEnded) return;
+        gamePaused = true;
+    });
+
+    // Play Button
+    playBtn = document.createElement('button');
+    playBtn.className = 'btn btn--play';
+    playBtn.textContent = '▶ PLAY';
+    playBtn.addEventListener('click', () => {
+        if (gameEnded) return;
+        gameStarted = true;
+        gamePaused = false;
+    });
+
+    const ctrlBtn = document.createElement('button');
+    ctrlBtn.className = 'ctrl-btn';
+    ctrlBtn.textContent = '⌨ CONTROLS';
+    const controlsPanel = document.createElement('div');
+    controlsPanel.id = 'controls-panel';
+    controlsPanel.className = 'controls-panel is-hidden';
+    controlsPanel.setAttribute('role', 'dialog');
+    controlsPanel.setAttribute('aria-modal', 'false');
     controlsPanel.innerHTML = `<div class="controls-panel__header"><strong>Game Controls</strong><button class="controls-panel__close" aria-label="Close controls">✕</button></div><ul class="controls-panel__list"><li><kbd>W/A/S/D</kbd> or <kbd>Arrow Keys</kbd> — Move</li><li><kbd>Space</kbd> — Action / Interact</li><li><kbd>Shift</kbd> — Sprint</li><li><kbd>P</kbd> — Pause</li><li><kbd>M</kbd> — Mute/Unmute</li><li><kbd>?</kbd> — Toggle Controls</li></ul>`;
     const closeBtn = controlsPanel.querySelector('.controls-panel__close');
-    const toggleControls = (forceState) => { const isHidden = controlsPanel.classList.contains('is-hidden'); const shouldOpen = typeof forceState === 'boolean' ? forceState : isHidden; controlsPanel.classList.toggle('is-hidden', !shouldOpen); ctrlBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false'); };
+    const toggleControls = (forceState) => {
+        const isHidden = controlsPanel.classList.contains('is-hidden');
+        const shouldOpen = typeof forceState === 'boolean' ? forceState : isHidden;
+        controlsPanel.classList.toggle('is-hidden', !shouldOpen);
+        ctrlBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    };
     ctrlBtn.addEventListener('click', () => toggleControls());
     closeBtn.addEventListener('click', () => toggleControls(false));
-    document.addEventListener('keydown', (e) => { if (e.key === '?' || (e.shiftKey && e.key === '/')) toggleControls(); if (e.key === 'Escape') toggleControls(false); });
-    controlsRow.appendChild(playBtn); controlsRow.appendChild(pauseBtn); controlsRow.appendChild(ctrlBtn);
-    hudEl.appendChild(progressContainer); hudEl.appendChild(mainContentRow); hudEl.appendChild(controlsRow); hudEl.appendChild(controlsPanel); document.body.appendChild(hudEl);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === '?' || (e.shiftKey && e.key === '/')) toggleControls();
+        if (e.key === 'Escape') toggleControls(false);
+    });
+
+    controlsRow.appendChild(playBtn);
+    controlsRow.appendChild(pauseBtn);
+    controlsRow.appendChild(ctrlBtn);
+
+    hudEl.appendChild(progressContainer);
+    hudEl.appendChild(mainContentRow);
+    hudEl.appendChild(controlsRow);
+    hudEl.appendChild(controlsPanel);
+    document.body.appendChild(hudEl);
     updateHUD();
 }
 
@@ -282,7 +348,6 @@ function formatTime(ms) { const totalSec = Math.max(0, Math.ceil(ms / 1000)); co
 function updateHUD() {
     const reportsCounter = document.getElementById('reports-counter'); if (reportsCounter) { reportsCounter.textContent = `${reportsCollected}/${totalReports}`; }
     const progressBar = document.getElementById('time-progress-bar'); if (progressBar) { const progressPercent = (timeMsLeft / timeMsTotal) * 100; progressBar.style.width = `${Math.max(0, progressPercent)}%`; progressBar.classList.remove('time-progress-bar--ok', 'time-progress-bar--mid', 'time-progress-bar--low'); if (progressPercent < 25) { progressBar.classList.add('time-progress-bar--low'); } else if (progressPercent < 50) { progressBar.classList.add('time-progress-bar--mid'); } else { progressBar.classList.add('time-progress-bar--ok'); } }
-    // Note: You don't have an element with id="time-display" in setupHUD, so that part won't update. Add one if needed.
 }
 //----------------------------------
 
