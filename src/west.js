@@ -48,14 +48,44 @@ const savedCameraRotation = new THREE.Euler();
 const orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.enableDamping = true;
 
-// Lights
-const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(10, 10, 10);
-light.castShadow = true;
-light.shadow.mapSize.width = 2048;
-light.shadow.mapSize.height = 2048;
-scene.add(light);
-scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+// === OUTDOOR CAMPUS LIGHTING ===
+// 1. Hemisphere Light (Sky + Ground ambient lighting for outdoor scenes)
+const hemisphereLight = new THREE.HemisphereLight(
+    0x87CEEB, // Sky blue color from above
+    0x8B7355, // Ground/earth brown color from below
+    0.6        // Intensity
+);
+scene.add(hemisphereLight);
+
+// 2. Directional Light (Sunlight) - Main light source
+const sunLight = new THREE.DirectionalLight(0xFFFFE0, 1.2); // Warm white sunlight
+sunLight.position.set(50, 80, 40); // High up, mimicking afternoon sun
+sunLight.castShadow = true;
+
+// Configure shadow properties for realistic outdoor shadows
+sunLight.shadow.mapSize.width = 4096;  // High resolution shadows
+sunLight.shadow.mapSize.height = 4096;
+sunLight.shadow.camera.near = 0.5;
+sunLight.shadow.camera.far = 500;
+sunLight.shadow.camera.left = -100;
+sunLight.shadow.camera.right = 100;
+sunLight.shadow.camera.top = 100;
+sunLight.shadow.camera.bottom = -100;
+sunLight.shadow.bias = -0.0001; // Reduce shadow acne
+
+scene.add(sunLight);
+
+// 3. Additional Ambient Light for overall scene brightness
+const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.4); // Soft white ambient
+scene.add(ambientLight);
+
+// 4. Fill Light (Subtle directional from opposite side to soften shadows)
+const fillLight = new THREE.DirectionalLight(0xB0C4DE, 0.3); // Light steel blue
+fillLight.position.set(-30, 40, -30); // Opposite side of sun
+scene.add(fillLight);
+
+// Optional: Add fog for depth perception in outdoor scene
+scene.fog = new THREE.Fog(0x87CEEB, 100, 300); // Sky blue fog
 
 // Background
 const textureLoader = new THREE.TextureLoader();
