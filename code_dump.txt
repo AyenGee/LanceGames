@@ -1,0 +1,3338 @@
+
+===== FILE: carcross.html =====
+    1 | <!doctype html>
+    2 | <html>
+    3 |   <head>
+    4 |     <meta charset="utf-8" />
+    5 |     <title>three + Vite</title>
+    6 |     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    7 |   </head>
+    8 |   <body>
+    9 |     <div id="app"></div>
+   10 |     <script type="module" src="/src/carcross.js"></script>
+   11 |   </body>
+   12 | </html>
+   13 | 
+===== END FILE: carcross.html =====
+
+===== FILE: crossRoad.css =====
+    1 | @import url("https://fonts.googleapis.com/css?family=Press+Start+2P");
+    2 | body {
+    3 |   margin: 0;
+    4 |   display: flex;
+    5 |   font-family: "Press Start 2P", cursive;
+    6 | }
+    7 | 
+    8 | #controls {
+    9 |   position: absolute;
+   10 |   bottom: 20px;
+   11 |   min-width: 100%;
+   12 |   display: flex;
+   13 |   align-items: flex-end;
+   14 |   justify-content: center;
+   15 | }
+   16 | 
+   17 | #controls div {
+   18 |   display: grid;
+   19 |   grid-template-columns: 50px 50px 50px;
+   20 |   gap: 10px;
+   21 | }
+   22 | 
+   23 | #controls button {
+   24 |   width: 100%;
+   25 |   height: 40px;
+   26 |   background-color: white;
+   27 |   border: 1px solid lightgray;
+   28 |   box-shadow: 3px 5px 0px 0px rgba(0, 0, 0, 0.75);
+   29 |   cursor: pointer;
+   30 |   outline: none;
+   31 | }
+   32 | 
+   33 | #controls button:first-of-type {
+   34 |   grid-column: 1/-1;
+   35 | }
+   36 | 
+   37 | #score {
+   38 |   position: absolute;
+   39 |   top: 20px;
+   40 |   left: 20px;
+   41 | 
+   42 |   font-size: 2em;
+   43 |   color: white;
+   44 | }
+   45 | 
+   46 | #result-container {
+   47 |   position: absolute;
+   48 |   min-width: 100%;
+   49 |   min-height: 100%;
+   50 |   top: 0;
+   51 |   display: flex;
+   52 |   align-items: center;
+   53 |   justify-content: center;
+   54 |   visibility: hidden;
+   55 | 
+   56 |   #result {
+   57 |     display: flex;
+   58 |     flex-direction: column;
+   59 |     align-items: center;
+   60 |     background-color: white;
+   61 |     padding: 20px;
+   62 |   }
+   63 | 
+   64 |   button {
+   65 |     background-color: red;
+   66 |     padding: 20px 50px 20px 50px;
+   67 |     font-family: inherit;
+   68 |     font-size: inherit;
+   69 |     cursor: pointer;
+   70 |   }
+   71 | }
+   72 | 
+   73 | 
+   74 | #youtube,
+   75 | #youtube-card {
+   76 |   display: none;
+   77 |   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+   78 |   color: black;
+   79 | }
+   80 | 
+   81 | @media (min-height: 425px) {
+   82 |   /** Youtube logo by https://codepen.io/alvaromontoro */
+   83 |   #youtube {
+   84 |     z-index: 50;
+   85 |     width: 100px;
+   86 |     display: block;
+   87 |     height: 70px;
+   88 |     position: fixed;
+   89 |     bottom: 20px;
+   90 |     right: 20px;
+   91 |     background: red;
+   92 |     border-radius: 50% / 11%;
+   93 |     transform: scale(0.8);
+   94 |     transition: transform 0.5s;
+   95 |   }
+   96 | 
+   97 |   #youtube:hover,
+   98 |   #youtube:focus {
+   99 |     transform: scale(0.9);
+  100 |     color: black;
+  101 |   }
+  102 | 
+  103 |   #youtube::before {
+  104 |     content: "";
+  105 |     display: block;
+  106 |     position: absolute;
+  107 |     top: 7.5%;
+  108 |     left: -6%;
+  109 |     width: 112%;
+  110 |     height: 85%;
+  111 |     background: red;
+  112 |     border-radius: 9% / 50%;
+  113 |   }
+  114 | 
+  115 |   #youtube::after {
+  116 |     content: "";
+  117 |     display: block;
+  118 |     position: absolute;
+  119 |     top: 20px;
+  120 |     left: 40px;
+  121 |     width: 45px;
+  122 |     height: 30px;
+  123 |     border: 15px solid transparent;
+  124 |     box-sizing: border-box;
+  125 |     border-left: 30px solid white;
+  126 |   }
+  127 | 
+  128 |   #youtube span {
+  129 |     font-size: 0;
+  130 |     position: absolute;
+  131 |     width: 0;
+  132 |     height: 0;
+  133 |     overflow: hidden;
+  134 |   }
+  135 | 
+  136 |   #youtube:hover + #youtube-card {
+  137 |     z-index: 49;
+  138 |     display: block;
+  139 |     position: fixed;
+  140 |     bottom: 12px;
+  141 |     right: 10px;
+  142 |     padding: 25px 130px 25px 25px;
+  143 |     width: 300px;
+  144 |     background-color: white;
+  145 |   }
+  146 | }
+  147 | 
+===== END FILE: crossRoad.css =====
+
+===== FILE: crossRoad.html =====
+    1 | <!doctype html>
+    2 | <html>
+    3 |   <head>
+    4 |     <meta charset="utf-8" />
+    5 |     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    6 |     <title>Cross Road</title>
+    7 |     <link rel="stylesheet" href="./crossRoad.css" />
+    8 |   </head>
+    9 |   <body>
+   10 |     <canvas class="game"></canvas>
+   11 |     <div id="controls">
+   12 |       <div>
+   13 |         <button id="forward">▲</button>
+   14 |         <button id="left">◀</button>
+   15 |         <button id="backward">▼</button>
+   16 |         <button id="right">▶</button>
+   17 |       </div>
+   18 |     </div>
+   19 |     <div id="score">0</div>
+   20 |     <div id="result-container">
+   21 |       <div id="result">
+   22 |         <h1>Game Over</h1>
+   23 |         <p>Your score: <span id="final-score"></span></p>
+   24 |         <button id="retry">Retry</button>
+   25 |       </div>
+   26 |     </div>
+   27 |     <script type="module" src="src/crossRoad.js"></script>
+   28 |   </body>
+   29 |   </html>
+===== END FILE: crossRoad.html =====
+
+===== FILE: crossy-road-with-three-js/src/index.html =====
+    1 | <canvas class="game"></canvas>
+    2 | <div id="controls">
+    3 |   <div>
+    4 |     <button id="forward">▲</button>
+    5 |     <button id="left">◀</button>
+    6 |     <button id="backward">▼</button>
+    7 |     <button id="right">▶</button>
+    8 |   </div>
+    9 | </div>
+   10 | <div id="score">0</div>
+   11 | <div id="result-container">
+   12 |   <div id="result">
+   13 |     <h1>Game Over</h1>
+   14 |     <p>Your score: <span id="final-score"></span></p>
+   15 |     <button id="retry">Retry</button>
+   16 |   </div>
+   17 | </div>
+   18 | 
+   19 | <a id="youtube" target="_top" href="https://youtu.be/vNr3_hQ3Bws">
+   20 |   <span>Learn Three.js while building this game on YouTube</span>
+   21 | </a>
+   22 | <div id="youtube-card">
+   23 |   Learn Three.js while building this game on YouTube
+   24 | </div>
+===== END FILE: crossy-road-with-three-js/src/index.html =====
+
+===== FILE: crossy-road-with-three-js/src/script.js =====
+    1 | /*
+    2 | 
+    3 | Learn how to code this watch step by step on YouTube:
+    4 | 
+    5 | https://youtu.be/vNr3_hQ3Bws
+    6 | 
+    7 | or on:
+    8 | 
+    9 | https://javascriptgametutorials.com/
+   10 | 
+   11 | */
+   12 | 
+   13 | 
+   14 | import * as THREE from "https://esm.sh/three";
+   15 | 
+   16 | const minTileIndex = -8;
+   17 | const maxTileIndex = 8;
+   18 | const tilesPerRow = maxTileIndex - minTileIndex + 1;
+   19 | const tileSize = 42;
+   20 | 
+   21 | function Camera() {
+   22 |   const size = 300;
+   23 |   const viewRatio = window.innerWidth / window.innerHeight;
+   24 |   const width = viewRatio < 1 ? size : size * viewRatio;
+   25 |   const height = viewRatio < 1 ? size / viewRatio : size;
+   26 | 
+   27 |   const camera = new THREE.OrthographicCamera(
+   28 |     width / -2, // left
+   29 |     width / 2, // right
+   30 |     height / 2, // top
+   31 |     height / -2, // bottom
+   32 |     100, // near
+   33 |     900 // far
+   34 |   );
+   35 | 
+   36 |   camera.up.set(0, 0, 1);
+   37 |   camera.position.set(300, -300, 300);
+   38 |   camera.lookAt(0, 0, 0);
+   39 | 
+   40 |   return camera;
+   41 | }
+   42 | 
+   43 | function Texture(width, height, rects) {
+   44 |   const canvas = document.createElement("canvas");
+   45 |   canvas.width = width;
+   46 |   canvas.height = height;
+   47 |   const context = canvas.getContext("2d");
+   48 |   context.fillStyle = "#ffffff";
+   49 |   context.fillRect(0, 0, width, height);
+   50 |   context.fillStyle = "rgba(0,0,0,0.6)";
+   51 |   rects.forEach((rect) => {
+   52 |     context.fillRect(rect.x, rect.y, rect.w, rect.h);
+   53 |   });
+   54 |   return new THREE.CanvasTexture(canvas);
+   55 | }
+   56 | 
+   57 | const carFrontTexture = new Texture(40, 80, [{ x: 0, y: 10, w: 30, h: 60 }]);
+   58 | const carBackTexture = new Texture(40, 80, [{ x: 10, y: 10, w: 30, h: 60 }]);
+   59 | const carRightSideTexture = new Texture(110, 40, [
+   60 |   { x: 10, y: 0, w: 50, h: 30 },
+   61 |   { x: 70, y: 0, w: 30, h: 30 },
+   62 | ]);
+   63 | const carLeftSideTexture = new Texture(110, 40, [
+   64 |   { x: 10, y: 10, w: 50, h: 30 },
+   65 |   { x: 70, y: 10, w: 30, h: 30 },
+   66 | ]);
+   67 | 
+   68 | export const truckFrontTexture = Texture(30, 30, [
+   69 |   { x: 5, y: 0, w: 10, h: 30 },
+   70 | ]);
+   71 | export const truckRightSideTexture = Texture(25, 30, [
+   72 |   { x: 15, y: 5, w: 10, h: 10 },
+   73 | ]);
+   74 | export const truckLeftSideTexture = Texture(25, 30, [
+   75 |   { x: 15, y: 15, w: 10, h: 10 },
+   76 | ]);
+   77 | 
+   78 | 
+   79 | function Car(initialTileIndex, direction, color) {
+   80 |   const car = new THREE.Group();
+   81 |   car.position.x = initialTileIndex * tileSize;
+   82 |   if (!direction) car.rotation.z = Math.PI;
+   83 | 
+   84 |   const main = new THREE.Mesh(
+   85 |     new THREE.BoxGeometry(60, 30, 15),
+   86 |     new THREE.MeshLambertMaterial({ color, flatShading: true })
+   87 |   );
+   88 |   main.position.z = 12;
+   89 |   main.castShadow = true;
+   90 |   main.receiveShadow = true;
+   91 |   car.add(main);
+   92 | 
+   93 |   const cabin = new THREE.Mesh(new THREE.BoxGeometry(33, 24, 12), [
+   94 |     new THREE.MeshPhongMaterial({
+   95 |       color: 0xcccccc,
+   96 |       flatShading: true,
+   97 |       map: carBackTexture,
+   98 |     }),
+   99 |     new THREE.MeshPhongMaterial({
+  100 |       color: 0xcccccc,
+  101 |       flatShading: true,
+  102 |       map: carFrontTexture,
+  103 |     }),
+  104 |     new THREE.MeshPhongMaterial({
+  105 |       color: 0xcccccc,
+  106 |       flatShading: true,
+  107 |       map: carRightSideTexture,
+  108 |     }),
+  109 |     new THREE.MeshPhongMaterial({
+  110 |       color: 0xcccccc,
+  111 |       flatShading: true,
+  112 |       map: carLeftSideTexture,
+  113 |     }),
+  114 |     new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true }), // top
+  115 |     new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true }), // bottom
+  116 |   ]);
+  117 |   cabin.position.x = -6;
+  118 |   cabin.position.z = 25.5;
+  119 |   cabin.castShadow = true;
+  120 |   cabin.receiveShadow = true;
+  121 |   car.add(cabin);
+  122 | 
+  123 |   const frontWheel = Wheel(18);
+  124 |   car.add(frontWheel);
+  125 | 
+  126 |   const backWheel = Wheel(-18);
+  127 |   car.add(backWheel);
+  128 | 
+  129 |   return car;
+  130 | }
+  131 | 
+  132 | function DirectionalLight() {
+  133 |   const dirLight = new THREE.DirectionalLight();
+  134 |   dirLight.position.set(-100, -100, 200);
+  135 |   dirLight.up.set(0, 0, 1);
+  136 |   dirLight.castShadow = true;
+  137 | 
+  138 |   dirLight.shadow.mapSize.width = 2048;
+  139 |   dirLight.shadow.mapSize.height = 2048;
+  140 | 
+  141 |   dirLight.shadow.camera.up.set(0, 0, 1);
+  142 |   dirLight.shadow.camera.left = -400;
+  143 |   dirLight.shadow.camera.right = 400;
+  144 |   dirLight.shadow.camera.top = 400;
+  145 |   dirLight.shadow.camera.bottom = -400;
+  146 |   dirLight.shadow.camera.near = 50;
+  147 |   dirLight.shadow.camera.far = 400;
+  148 | 
+  149 |   return dirLight;
+  150 | }
+  151 | 
+  152 | function Grass(rowIndex) {
+  153 |   const grass = new THREE.Group();
+  154 |   grass.position.y = rowIndex * tileSize;
+  155 | 
+  156 |   const createSection = (color) =>
+  157 |     new THREE.Mesh(
+  158 |       new THREE.BoxGeometry(tilesPerRow * tileSize, tileSize, 3),
+  159 |       new THREE.MeshLambertMaterial({ color })
+  160 |     );
+  161 | 
+  162 |   const middle = createSection(0xbaf455);
+  163 |   middle.receiveShadow = true;
+  164 |   grass.add(middle);
+  165 | 
+  166 |   const left = createSection(0x99c846);
+  167 |   left.position.x = -tilesPerRow * tileSize;
+  168 |   grass.add(left);
+  169 | 
+  170 |   const right = createSection(0x99c846);
+  171 |   right.position.x = tilesPerRow * tileSize;
+  172 |   grass.add(right);
+  173 | 
+  174 |   return grass;
+  175 | }
+  176 | 
+  177 | const metadata = [];
+  178 | 
+  179 | const map = new THREE.Group();
+  180 | 
+  181 | function initializeMap() {
+  182 |   // Remove all rows
+  183 |   metadata.length = 0;
+  184 |   map.remove(...map.children);
+  185 | 
+  186 |   // Add new rows
+  187 |   for (let rowIndex = 0; rowIndex > -10; rowIndex--) {
+  188 |     const grass = Grass(rowIndex);
+  189 |     map.add(grass);
+  190 |   }
+  191 |   addRows();
+  192 | }
+  193 | 
+  194 | function addRows() {
+  195 |   const newMetadata = generateRows(20);
+  196 | 
+  197 |   const startIndex = metadata.length;
+  198 |   metadata.push(...newMetadata);
+  199 | 
+  200 |   newMetadata.forEach((rowData, index) => {
+  201 |     const rowIndex = startIndex + index + 1;
+  202 | 
+  203 |     if (rowData.type === "forest") {
+  204 |       const row = Grass(rowIndex);
+  205 | 
+  206 |       rowData.trees.forEach(({ tileIndex, height }) => {
+  207 |         const three = Tree(tileIndex, height);
+  208 |         row.add(three);
+  209 |       });
+  210 | 
+  211 |       map.add(row);
+  212 |     }
+  213 | 
+  214 |     if (rowData.type === "car") {
+  215 |       const row = Road(rowIndex);
+  216 | 
+  217 |       rowData.vehicles.forEach((vehicle) => {
+  218 |         const car = Car(
+  219 |           vehicle.initialTileIndex,
+  220 |           rowData.direction,
+  221 |           vehicle.color
+  222 |         );
+  223 |         vehicle.ref = car;
+  224 |         row.add(car);
+  225 |       });
+  226 | 
+  227 |       map.add(row);
+  228 |     }
+  229 | 
+  230 |     if (rowData.type === "truck") {
+  231 |       const row = Road(rowIndex);
+  232 | 
+  233 |       rowData.vehicles.forEach((vehicle) => {
+  234 |         const truck = Truck(
+  235 |           vehicle.initialTileIndex,
+  236 |           rowData.direction,
+  237 |           vehicle.color
+  238 |         );
+  239 |         vehicle.ref = truck;
+  240 |         row.add(truck);
+  241 |       });
+  242 | 
+  243 |       map.add(row);
+  244 |     }
+  245 |   });
+  246 | }
+  247 | 
+  248 | const player = Player();
+  249 | 
+  250 | function Player() {
+  251 |   const player = new THREE.Group();
+  252 | 
+  253 |   const body = new THREE.Mesh(
+  254 |     new THREE.BoxGeometry(15, 15, 20),
+  255 |     new THREE.MeshLambertMaterial({
+  256 |       color: "white",
+  257 |       flatShading: true,
+  258 |     })
+  259 |   );
+  260 |   body.position.z = 10;
+  261 |   body.castShadow = true;
+  262 |   body.receiveShadow = true;
+  263 |   player.add(body);
+  264 | 
+  265 |   const cap = new THREE.Mesh(
+  266 |     new THREE.BoxGeometry(2, 4, 2),
+  267 |     new THREE.MeshLambertMaterial({
+  268 |       color: 0xf0619a,
+  269 |       flatShading: true,
+  270 |     })
+  271 |   );
+  272 |   cap.position.z = 21;
+  273 |   cap.castShadow = true;
+  274 |   cap.receiveShadow = true;
+  275 |   player.add(cap);
+  276 | 
+  277 |   const playerContainer = new THREE.Group();
+  278 |   playerContainer.add(player);
+  279 | 
+  280 |   return playerContainer;
+  281 | }
+  282 | 
+  283 | const position = {
+  284 |   currentRow: 0,
+  285 |   currentTile: 0,
+  286 | };
+  287 | 
+  288 | const movesQueue = [];
+  289 | 
+  290 | function initializePlayer() {
+  291 |   // Initialize the Three.js player object
+  292 |   player.position.x = 0;
+  293 |   player.position.y = 0;
+  294 |   player.children[0].position.z = 0;
+  295 | 
+  296 |   // Initialize metadata
+  297 |   position.currentRow = 0;
+  298 |   position.currentTile = 0;
+  299 | 
+  300 |   // Clear the moves queue
+  301 |   movesQueue.length = 0;
+  302 | }
+  303 | 
+  304 | function queueMove(direction) {
+  305 |   const isValidMove = endsUpInValidPosition(
+  306 |     {
+  307 |       rowIndex: position.currentRow,
+  308 |       tileIndex: position.currentTile,
+  309 |     },
+  310 |     [...movesQueue, direction]
+  311 |   );
+  312 | 
+  313 |   if (!isValidMove) return;
+  314 | 
+  315 |   movesQueue.push(direction);
+  316 | }
+  317 | 
+  318 | function stepCompleted() {
+  319 |   const direction = movesQueue.shift();
+  320 | 
+  321 |   if (direction === "forward") position.currentRow += 1;
+  322 |   if (direction === "backward") position.currentRow -= 1;
+  323 |   if (direction === "left") position.currentTile -= 1;
+  324 |   if (direction === "right") position.currentTile += 1;
+  325 | 
+  326 |   // Add new rows if the player is running out of them
+  327 |   if (position.currentRow > metadata.length - 10) addRows();
+  328 | 
+  329 |   const scoreDOM = document.getElementById("score");
+  330 |   if (scoreDOM) scoreDOM.innerText = position.currentRow.toString();
+  331 | }
+  332 | 
+  333 | function Renderer() {
+  334 |   const canvas = document.querySelector("canvas.game");
+  335 |   if (!canvas) throw new Error("Canvas not found");
+  336 | 
+  337 |   const renderer = new THREE.WebGLRenderer({
+  338 |     alpha: true,
+  339 |     antialias: true,
+  340 |     canvas: canvas,
+  341 |   });
+  342 |   renderer.setPixelRatio(window.devicePixelRatio);
+  343 |   renderer.setSize(window.innerWidth, window.innerHeight);
+  344 |   renderer.shadowMap.enabled = true;
+  345 | 
+  346 |   return renderer;
+  347 | }
+  348 | 
+  349 | function Road(rowIndex) {
+  350 |   const road = new THREE.Group();
+  351 |   road.position.y = rowIndex * tileSize;
+  352 | 
+  353 |   const createSection = (color) =>
+  354 |     new THREE.Mesh(
+  355 |       new THREE.PlaneGeometry(tilesPerRow * tileSize, tileSize),
+  356 |       new THREE.MeshLambertMaterial({ color })
+  357 |     );
+  358 | 
+  359 |   const middle = createSection(0x454a59);
+  360 |   middle.receiveShadow = true;
+  361 |   road.add(middle);
+  362 | 
+  363 |   const left = createSection(0x393d49);
+  364 |   left.position.x = -tilesPerRow * tileSize;
+  365 |   road.add(left);
+  366 | 
+  367 |   const right = createSection(0x393d49);
+  368 |   right.position.x = tilesPerRow * tileSize;
+  369 |   road.add(right);
+  370 | 
+  371 |   return road;
+  372 | }
+  373 | 
+  374 | function Tree(tileIndex, height) {
+  375 |   const tree = new THREE.Group();
+  376 |   tree.position.x = tileIndex * tileSize;
+  377 | 
+  378 |   const trunk = new THREE.Mesh(
+  379 |     new THREE.BoxGeometry(15, 15, 20),
+  380 |     new THREE.MeshLambertMaterial({
+  381 |       color: 0x4d2926,
+  382 |       flatShading: true,
+  383 |     })
+  384 |   );
+  385 |   trunk.position.z = 10;
+  386 |   tree.add(trunk);
+  387 | 
+  388 |   const crown = new THREE.Mesh(
+  389 |     new THREE.BoxGeometry(30, 30, height),
+  390 |     new THREE.MeshLambertMaterial({
+  391 |       color: 0x7aa21d,
+  392 |       flatShading: true,
+  393 |     })
+  394 |   );
+  395 |   crown.position.z = height / 2 + 20;
+  396 |   crown.castShadow = true;
+  397 |   crown.receiveShadow = true;
+  398 |   tree.add(crown);
+  399 | 
+  400 |   return tree;
+  401 | }
+  402 | 
+  403 | function Truck(initialTileIndex, direction, color) {
+  404 |   const truck = new THREE.Group();
+  405 |   truck.position.x = initialTileIndex * tileSize;
+  406 |   if (!direction) truck.rotation.z = Math.PI;
+  407 | 
+  408 |   const cargo = new THREE.Mesh(
+  409 |     new THREE.BoxGeometry(70, 35, 35),
+  410 |     new THREE.MeshLambertMaterial({
+  411 |       color: 0xb4c6fc,
+  412 |       flatShading: true,
+  413 |     })
+  414 |   );
+  415 |   cargo.position.x = -15;
+  416 |   cargo.position.z = 25;
+  417 |   cargo.castShadow = true;
+  418 |   cargo.receiveShadow = true;
+  419 |   truck.add(cargo);
+  420 | 
+  421 |   const cabin = new THREE.Mesh(new THREE.BoxGeometry(30, 30, 30), [
+  422 |     new THREE.MeshLambertMaterial({
+  423 |       color,
+  424 |       flatShading: true,
+  425 |       map: truckFrontTexture,
+  426 |     }), // front
+  427 |     new THREE.MeshLambertMaterial({
+  428 |       color,
+  429 |       flatShading: true,
+  430 |     }), // back
+  431 |     new THREE.MeshLambertMaterial({
+  432 |       color,
+  433 |       flatShading: true,
+  434 |       map: truckLeftSideTexture,
+  435 |     }),
+  436 |     new THREE.MeshLambertMaterial({
+  437 |       color,
+  438 |       flatShading: true,
+  439 |       map: truckRightSideTexture,
+  440 |     }),
+  441 |     new THREE.MeshPhongMaterial({ color, flatShading: true }), // top
+  442 |     new THREE.MeshPhongMaterial({ color, flatShading: true }), // bottom
+  443 |   ]);
+  444 |   cabin.position.x = 35;
+  445 |   cabin.position.z = 20;
+  446 |   cabin.castShadow = true;
+  447 |   cabin.receiveShadow = true;
+  448 | 
+  449 |   truck.add(cabin);
+  450 | 
+  451 |   const frontWheel = Wheel(37);
+  452 |   truck.add(frontWheel);
+  453 | 
+  454 |   const middleWheel = Wheel(5);
+  455 |   truck.add(middleWheel);
+  456 | 
+  457 |   const backWheel = Wheel(-35);
+  458 |   truck.add(backWheel);
+  459 | 
+  460 |   return truck;
+  461 | }
+  462 | 
+  463 | function Wheel(x) {
+  464 |   const wheel = new THREE.Mesh(
+  465 |     new THREE.BoxGeometry(12, 33, 12),
+  466 |     new THREE.MeshLambertMaterial({
+  467 |       color: 0x333333,
+  468 |       flatShading: true,
+  469 |     })
+  470 |   );
+  471 |   wheel.position.x = x;
+  472 |   wheel.position.z = 6;
+  473 |   return wheel;
+  474 | }
+  475 | 
+  476 | function calculateFinalPosition(currentPosition, moves) {
+  477 |   return moves.reduce((position, direction) => {
+  478 |     if (direction === "forward")
+  479 |       return {
+  480 |         rowIndex: position.rowIndex + 1,
+  481 |         tileIndex: position.tileIndex,
+  482 |       };
+  483 |     if (direction === "backward")
+  484 |       return {
+  485 |         rowIndex: position.rowIndex - 1,
+  486 |         tileIndex: position.tileIndex,
+  487 |       };
+  488 |     if (direction === "left")
+  489 |       return {
+  490 |         rowIndex: position.rowIndex,
+  491 |         tileIndex: position.tileIndex - 1,
+  492 |       };
+  493 |     if (direction === "right")
+  494 |       return {
+  495 |         rowIndex: position.rowIndex,
+  496 |         tileIndex: position.tileIndex + 1,
+  497 |       };
+  498 |     return position;
+  499 |   }, currentPosition);
+  500 | }
+  501 | 
+  502 | function endsUpInValidPosition(currentPosition, moves) {
+  503 |   // Calculate where the player would end up after the move
+  504 |   const finalPosition = calculateFinalPosition(currentPosition, moves);
+  505 | 
+  506 |   // Detect if we hit the edge of the board
+  507 |   if (
+  508 |     finalPosition.rowIndex === -1 ||
+  509 |     finalPosition.tileIndex === minTileIndex - 1 ||
+  510 |     finalPosition.tileIndex === maxTileIndex + 1
+  511 |   ) {
+  512 |     // Invalid move, ignore move command
+  513 |     return false;
+  514 |   }
+  515 | 
+  516 |   // Detect if we hit a tree
+  517 |   const finalRow = metadata[finalPosition.rowIndex - 1];
+  518 |   if (
+  519 |     finalRow &&
+  520 |     finalRow.type === "forest" &&
+  521 |     finalRow.trees.some((tree) => tree.tileIndex === finalPosition.tileIndex)
+  522 |   ) {
+  523 |     // Invalid move, ignore move command
+  524 |     return false;
+  525 |   }
+  526 | 
+  527 |   return true;
+  528 | }
+  529 | 
+  530 | function generateRows(amount) {
+  531 |   const rows = [];
+  532 |   for (let i = 0; i < amount; i++) {
+  533 |     const rowData = generateRow();
+  534 |     rows.push(rowData);
+  535 |   }
+  536 |   return rows;
+  537 | }
+  538 | 
+  539 | function generateRow() {
+  540 |   const type = randomElement(["car", "truck", "forest"]);
+  541 |   if (type === "car") return generateCarLaneMetadata();
+  542 |   if (type === "truck") return generateTruckLaneMetadata();
+  543 |   return generateForesMetadata();
+  544 | }
+  545 | 
+  546 | function randomElement(array) {
+  547 |   return array[Math.floor(Math.random() * array.length)];
+  548 | }
+  549 | 
+  550 | function generateForesMetadata() {
+  551 |   const occupiedTiles = new Set();
+  552 |   const trees = Array.from({ length: 4 }, () => {
+  553 |     let tileIndex;
+  554 |     do {
+  555 |       tileIndex = THREE.MathUtils.randInt(minTileIndex, maxTileIndex);
+  556 |     } while (occupiedTiles.has(tileIndex));
+  557 |     occupiedTiles.add(tileIndex);
+  558 | 
+  559 |     const height = randomElement([20, 45, 60]);
+  560 | 
+  561 |     return { tileIndex, height };
+  562 |   });
+  563 | 
+  564 |   return { type: "forest", trees };
+  565 | }
+  566 | 
+  567 | function generateCarLaneMetadata() {
+  568 |   const direction = randomElement([true, false]);
+  569 |   const speed = randomElement([125, 156, 188]);
+  570 | 
+  571 |   const occupiedTiles = new Set();
+  572 | 
+  573 |   const vehicles = Array.from({ length: 3 }, () => {
+  574 |     let initialTileIndex;
+  575 |     do {
+  576 |       initialTileIndex = THREE.MathUtils.randInt(minTileIndex, maxTileIndex);
+  577 |     } while (occupiedTiles.has(initialTileIndex));
+  578 |     occupiedTiles.add(initialTileIndex - 1);
+  579 |     occupiedTiles.add(initialTileIndex);
+  580 |     occupiedTiles.add(initialTileIndex + 1);
+  581 | 
+  582 |     const color = randomElement([0xa52523, 0xbdb638, 0x78b14b]);
+  583 | 
+  584 |     return { initialTileIndex, color };
+  585 |   });
+  586 | 
+  587 |   return { type: "car", direction, speed, vehicles };
+  588 | }
+  589 | 
+  590 | function generateTruckLaneMetadata() {
+  591 |   const direction = randomElement([true, false]);
+  592 |   const speed = randomElement([125, 156, 188]);
+  593 | 
+  594 |   const occupiedTiles = new Set();
+  595 | 
+  596 |   const vehicles = Array.from({ length: 2 }, () => {
+  597 |     let initialTileIndex;
+  598 |     do {
+  599 |       initialTileIndex = THREE.MathUtils.randInt(minTileIndex, maxTileIndex);
+  600 |     } while (occupiedTiles.has(initialTileIndex));
+  601 |     occupiedTiles.add(initialTileIndex - 2);
+  602 |     occupiedTiles.add(initialTileIndex - 1);
+  603 |     occupiedTiles.add(initialTileIndex);
+  604 |     occupiedTiles.add(initialTileIndex + 1);
+  605 |     occupiedTiles.add(initialTileIndex + 2);
+  606 | 
+  607 |     const color = randomElement([0xa52523, 0xbdb638, 0x78b14b]);
+  608 | 
+  609 |     return { initialTileIndex, color };
+  610 |   });
+  611 | 
+  612 |   return { type: "truck", direction, speed, vehicles };
+  613 | }
+  614 | 
+  615 | const moveClock = new THREE.Clock(false);
+  616 | 
+  617 | function animatePlayer() {
+  618 |   if (!movesQueue.length) return;
+  619 | 
+  620 |   if (!moveClock.running) moveClock.start();
+  621 | 
+  622 |   const stepTime = 0.2; // Seconds it takes to take a step
+  623 |   const progress = Math.min(1, moveClock.getElapsedTime() / stepTime);
+  624 | 
+  625 |   setPosition(progress);
+  626 |   setRotation(progress);
+  627 | 
+  628 |   // Once a step has ended
+  629 |   if (progress >= 1) {
+  630 |     stepCompleted();
+  631 |     moveClock.stop();
+  632 |   }
+  633 | }
+  634 | 
+  635 | function setPosition(progress) {
+  636 |   const startX = position.currentTile * tileSize;
+  637 |   const startY = position.currentRow * tileSize;
+  638 |   let endX = startX;
+  639 |   let endY = startY;
+  640 | 
+  641 |   if (movesQueue[0] === "left") endX -= tileSize;
+  642 |   if (movesQueue[0] === "right") endX += tileSize;
+  643 |   if (movesQueue[0] === "forward") endY += tileSize;
+  644 |   if (movesQueue[0] === "backward") endY -= tileSize;
+  645 | 
+  646 |   player.position.x = THREE.MathUtils.lerp(startX, endX, progress);
+  647 |   player.position.y = THREE.MathUtils.lerp(startY, endY, progress);
+  648 |   player.children[0].position.z = Math.sin(progress * Math.PI) * 8;
+  649 | }
+  650 | 
+  651 | function setRotation(progress) {
+  652 |   let endRotation = 0;
+  653 |   if (movesQueue[0] == "forward") endRotation = 0;
+  654 |   if (movesQueue[0] == "left") endRotation = Math.PI / 2;
+  655 |   if (movesQueue[0] == "right") endRotation = -Math.PI / 2;
+  656 |   if (movesQueue[0] == "backward") endRotation = Math.PI;
+  657 | 
+  658 |   player.children[0].rotation.z = THREE.MathUtils.lerp(
+  659 |     player.children[0].rotation.z,
+  660 |     endRotation,
+  661 |     progress
+  662 |   );
+  663 | }
+  664 | 
+  665 | const clock = new THREE.Clock();
+  666 | 
+  667 | function animateVehicles() {
+  668 |   const delta = clock.getDelta();
+  669 | 
+  670 |   // Animate cars and trucks
+  671 |   metadata.forEach((rowData) => {
+  672 |     if (rowData.type === "car" || rowData.type === "truck") {
+  673 |       const beginningOfRow = (minTileIndex - 2) * tileSize;
+  674 |       const endOfRow = (maxTileIndex + 2) * tileSize;
+  675 | 
+  676 |       rowData.vehicles.forEach(({ ref }) => {
+  677 |         if (!ref) throw Error("Vehicle reference is missing");
+  678 | 
+  679 |         if (rowData.direction) {
+  680 |           ref.position.x =
+  681 |             ref.position.x > endOfRow
+  682 |               ? beginningOfRow
+  683 |               : ref.position.x + rowData.speed * delta;
+  684 |         } else {
+  685 |           ref.position.x =
+  686 |             ref.position.x < beginningOfRow
+  687 |               ? endOfRow
+  688 |               : ref.position.x - rowData.speed * delta;
+  689 |         }
+  690 |       });
+  691 |     }
+  692 |   });
+  693 | }
+  694 | 
+  695 | document
+  696 |   .getElementById("forward")
+  697 |   ?.addEventListener("click", () => queueMove("forward"));
+  698 | 
+  699 | document
+  700 |   .getElementById("backward")
+  701 |   ?.addEventListener("click", () => queueMove("backward"));
+  702 | 
+  703 | document
+  704 |   .getElementById("left")
+  705 |   ?.addEventListener("click", () => queueMove("left"));
+  706 | 
+  707 | document
+  708 |   .getElementById("right")
+  709 |   ?.addEventListener("click", () => queueMove("right"));
+  710 | 
+  711 | window.addEventListener("keydown", (event) => {
+  712 |   if (event.key === "ArrowUp") {
+  713 |     event.preventDefault(); // Avoid scrolling the page
+  714 |     queueMove("forward");
+  715 |   } else if (event.key === "ArrowDown") {
+  716 |     event.preventDefault(); // Avoid scrolling the page
+  717 |     queueMove("backward");
+  718 |   } else if (event.key === "ArrowLeft") {
+  719 |     event.preventDefault(); // Avoid scrolling the page
+  720 |     queueMove("left");
+  721 |   } else if (event.key === "ArrowRight") {
+  722 |     event.preventDefault(); // Avoid scrolling the page
+  723 |     queueMove("right");
+  724 |   }
+  725 | });
+  726 | 
+  727 | function hitTest() {
+  728 |   const row = metadata[position.currentRow - 1];
+  729 |   if (!row) return;
+  730 | 
+  731 |   if (row.type === "car" || row.type === "truck") {
+  732 |     const playerBoundingBox = new THREE.Box3();
+  733 |     playerBoundingBox.setFromObject(player);
+  734 | 
+  735 |     row.vehicles.forEach(({ ref }) => {
+  736 |       if (!ref) throw Error("Vehicle reference is missing");
+  737 | 
+  738 |       const vehicleBoundingBox = new THREE.Box3();
+  739 |       vehicleBoundingBox.setFromObject(ref);
+  740 | 
+  741 |       if (playerBoundingBox.intersectsBox(vehicleBoundingBox)) {
+  742 |         if (!resultDOM || !finalScoreDOM) return;
+  743 |         resultDOM.style.visibility = "visible";
+  744 |         finalScoreDOM.innerText = position.currentRow.toString();
+  745 |       }
+  746 |     });
+  747 |   }
+  748 | }
+  749 | 
+  750 | const scene = new THREE.Scene();
+  751 | scene.add(player);
+  752 | scene.add(map);
+  753 | 
+  754 | const ambientLight = new THREE.AmbientLight();
+  755 | scene.add(ambientLight);
+  756 | 
+  757 | const dirLight = DirectionalLight();
+  758 | dirLight.target = player;
+  759 | player.add(dirLight);
+  760 | 
+  761 | const camera = Camera();
+  762 | player.add(camera);
+  763 | 
+  764 | const scoreDOM = document.getElementById("score");
+  765 | const resultDOM = document.getElementById("result-container");
+  766 | const finalScoreDOM = document.getElementById("final-score");
+  767 | 
+  768 | initializeGame();
+  769 | 
+  770 | document.querySelector("#retry")?.addEventListener("click", initializeGame);
+  771 | 
+  772 | function initializeGame() {
+  773 |   initializePlayer();
+  774 |   initializeMap();
+  775 | 
+  776 |   // Initialize UI
+  777 |   if (scoreDOM) scoreDOM.innerText = "0";
+  778 |   if (resultDOM) resultDOM.style.visibility = "hidden";
+  779 | }
+  780 | 
+  781 | const renderer = Renderer();
+  782 | renderer.setAnimationLoop(animate);
+  783 | 
+  784 | function animate() {
+  785 |   animateVehicles();
+  786 |   animatePlayer();
+  787 |   hitTest();
+  788 | 
+  789 |   renderer.render(scene, camera);
+  790 | }
+  791 | 
+===== END FILE: crossy-road-with-three-js/src/script.js =====
+
+===== FILE: crossy-road-with-three-js/src/style.css =====
+    1 | @import url("https://fonts.googleapis.com/css?family=Press+Start+2P");
+    2 | body {
+    3 |   margin: 0;
+    4 |   display: flex;
+    5 |   font-family: "Press Start 2P", cursive;
+    6 | }
+    7 | 
+    8 | #controls {
+    9 |   position: absolute;
+   10 |   bottom: 20px;
+   11 |   min-width: 100%;
+   12 |   display: flex;
+   13 |   align-items: flex-end;
+   14 |   justify-content: center;
+   15 | }
+   16 | 
+   17 | #controls div {
+   18 |   display: grid;
+   19 |   grid-template-columns: 50px 50px 50px;
+   20 |   gap: 10px;
+   21 | }
+   22 | 
+   23 | #controls button {
+   24 |   width: 100%;
+   25 |   height: 40px;
+   26 |   background-color: white;
+   27 |   border: 1px solid lightgray;
+   28 |   box-shadow: 3px 5px 0px 0px rgba(0, 0, 0, 0.75);
+   29 |   cursor: pointer;
+   30 |   outline: none;
+   31 | }
+   32 | 
+   33 | #controls button:first-of-type {
+   34 |   grid-column: 1/-1;
+   35 | }
+   36 | 
+   37 | #score {
+   38 |   position: absolute;
+   39 |   top: 20px;
+   40 |   left: 20px;
+   41 | 
+   42 |   font-size: 2em;
+   43 |   color: white;
+   44 | }
+   45 | 
+   46 | #result-container {
+   47 |   position: absolute;
+   48 |   min-width: 100%;
+   49 |   min-height: 100%;
+   50 |   top: 0;
+   51 |   display: flex;
+   52 |   align-items: center;
+   53 |   justify-content: center;
+   54 |   visibility: hidden;
+   55 | 
+   56 |   #result {
+   57 |     display: flex;
+   58 |     flex-direction: column;
+   59 |     align-items: center;
+   60 |     background-color: white;
+   61 |     padding: 20px;
+   62 |   }
+   63 | 
+   64 |   button {
+   65 |     background-color: red;
+   66 |     padding: 20px 50px 20px 50px;
+   67 |     font-family: inherit;
+   68 |     font-size: inherit;
+   69 |     cursor: pointer;
+   70 |   }
+   71 | }
+   72 | 
+   73 | 
+   74 | #youtube,
+   75 | #youtube-card {
+   76 |   display: none;
+   77 |   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+   78 |   color: black;
+   79 | }
+   80 | 
+   81 | @media (min-height: 425px) {
+   82 |   /** Youtube logo by https://codepen.io/alvaromontoro */
+   83 |   #youtube {
+   84 |     z-index: 50;
+   85 |     width: 100px;
+   86 |     display: block;
+   87 |     height: 70px;
+   88 |     position: fixed;
+   89 |     bottom: 20px;
+   90 |     right: 20px;
+   91 |     background: red;
+   92 |     border-radius: 50% / 11%;
+   93 |     transform: scale(0.8);
+   94 |     transition: transform 0.5s;
+   95 |   }
+   96 | 
+   97 |   #youtube:hover,
+   98 |   #youtube:focus {
+   99 |     transform: scale(0.9);
+  100 |     color: black;
+  101 |   }
+  102 | 
+  103 |   #youtube::before {
+  104 |     content: "";
+  105 |     display: block;
+  106 |     position: absolute;
+  107 |     top: 7.5%;
+  108 |     left: -6%;
+  109 |     width: 112%;
+  110 |     height: 85%;
+  111 |     background: red;
+  112 |     border-radius: 9% / 50%;
+  113 |   }
+  114 | 
+  115 |   #youtube::after {
+  116 |     content: "";
+  117 |     display: block;
+  118 |     position: absolute;
+  119 |     top: 20px;
+  120 |     left: 40px;
+  121 |     width: 45px;
+  122 |     height: 30px;
+  123 |     border: 15px solid transparent;
+  124 |     box-sizing: border-box;
+  125 |     border-left: 30px solid white;
+  126 |   }
+  127 | 
+  128 |   #youtube span {
+  129 |     font-size: 0;
+  130 |     position: absolute;
+  131 |     width: 0;
+  132 |     height: 0;
+  133 |     overflow: hidden;
+  134 |   }
+  135 | 
+  136 |   #youtube:hover + #youtube-card {
+  137 |     z-index: 49;
+  138 |     display: block;
+  139 |     position: fixed;
+  140 |     bottom: 12px;
+  141 |     right: 10px;
+  142 |     padding: 25px 130px 25px 25px;
+  143 |     width: 300px;
+  144 |     background-color: white;
+  145 |   }
+  146 | }
+  147 | 
+===== END FILE: crossy-road-with-three-js/src/style.css =====
+
+===== FILE: dump-codebase.mjs =====
+    1 | // dump-codebase.mjs
+    2 | import { promises as fs } from "fs";
+    3 | import path from "path";
+    4 | import os from "os";
+    5 | 
+    6 | const ROOT = process.argv[2] ? path.resolve(process.argv[2]) : process.cwd();
+    7 | const OUT_PATH = path.join(ROOT, "code_dump.txt");
+    8 | 
+    9 | // folders to always skip
+   10 | const SKIP_DIRS = new Set([
+   11 |   "node_modules", ".git", ".svn", ".hg", ".DS_Store",
+   12 |   "dist", "build", ".next", ".vercel", ".cache", "coverage", "tmp", "out"
+   13 | ]);
+   14 | 
+   15 | // files to skip by name (case-insensitive)
+   16 | const SKIP_FILES = [/^readme(?:\..*)?$/i, /^license(?:\..*)?$/i];
+   17 | 
+   18 | // include only these extensions (add more if you need)
+   19 | const KEEP_EXT = new Set([
+   20 |   ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
+   21 |   ".json", ".html", ".css", ".scss", ".sass",
+   22 |   ".glsl", ".vert", ".frag", ".md",
+   23 |   ".yaml", ".yml"
+   24 | ]);
+   25 | 
+   26 | // max size per file to avoid giant blobs (in bytes)
+   27 | const MAX_FILE_BYTES = 1_000_000; // 1 MB per file
+   28 | 
+   29 | async function isDir(p) {
+   30 |   try { return (await fs.lstat(p)).isDirectory(); } catch { return false; }
+   31 | }
+   32 | 
+   33 | function shouldSkipDir(name) {
+   34 |   return SKIP_DIRS.has(name);
+   35 | }
+   36 | 
+   37 | function shouldSkipFile(name) {
+   38 |   return SKIP_FILES.some((re) => re.test(name));
+   39 | }
+   40 | 
+   41 | function keepByExt(filename) {
+   42 |   const ext = path.extname(filename).toLowerCase();
+   43 |   return KEEP_EXT.has(ext);
+   44 | }
+   45 | 
+   46 | async function* walk(dir) {
+   47 |   const entries = await fs.readdir(dir, { withFileTypes: true });
+   48 |   for (const e of entries) {
+   49 |     const full = path.join(dir, e.name);
+   50 |     if (e.isDirectory()) {
+   51 |       if (!shouldSkipDir(e.name)) yield* walk(full);
+   52 |     } else if (e.isFile()) {
+   53 |       if (shouldSkipFile(e.name)) continue;
+   54 |       if (!keepByExt(e.name)) continue;
+   55 |       yield full;
+   56 |     }
+   57 |   }
+   58 | }
+   59 | 
+   60 | function withLineNumbers(text) {
+   61 |   return text
+   62 |     .split(/\r?\n/)
+   63 |     .map((line, i) => String(i + 1).padStart(5, " ") + " | " + line)
+   64 |     .join(os.EOL);
+   65 | }
+   66 | 
+   67 | async function main() {
+   68 |   const collected = [];
+   69 |   for await (const file of walk(ROOT)) {
+   70 |     try {
+   71 |       const stat = await fs.stat(file);
+   72 |       if (stat.size > MAX_FILE_BYTES) {
+   73 |         collected.push(
+   74 |           `\n===== ${path.relative(ROOT, file)} (SKIPPED: ${stat.size} bytes > ${MAX_FILE_BYTES}) =====\n`
+   75 |         );
+   76 |         continue;
+   77 |       }
+   78 |       const content = await fs.readFile(file, "utf8");
+   79 |       collected.push(
+   80 |         `\n===== FILE: ${path.relative(ROOT, file)} =====\n` +
+   81 |         withLineNumbers(content) +
+   82 |         `\n===== END FILE: ${path.relative(ROOT, file)} =====\n`
+   83 |       );
+   84 |     } catch (err) {
+   85 |       collected.push(
+   86 |         `\n===== ${path.relative(ROOT, file)} (ERROR READING: ${err.message}) =====\n`
+   87 |       );
+   88 |     }
+   89 |   }
+   90 | 
+   91 |   await fs.writeFile(OUT_PATH, collected.join(""), "utf8");
+   92 |   console.log(`Wrote ${OUT_PATH}`);
+   93 | }
+   94 | 
+   95 | main().catch((e) => {
+   96 |   console.error(e);
+   97 |   process.exit(1);
+   98 | });
+   99 | 
+===== END FILE: dump-codebase.mjs =====
+
+===== FILE: index.html =====
+    1 | <!doctype html>
+    2 | <html>
+    3 |   <head>
+    4 |     <meta charset="utf-8" />
+    5 |     <title>three + Vite</title>
+    6 |     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    7 |   </head>
+    8 |   <body>
+    9 |     <div id="app"></div>
+   10 |     <script type="module" src="/src/main.js"></script>
+   11 |   </body>
+   12 | </html>
+   13 | 
+===== END FILE: index.html =====
+
+===== FILE: package-lock.json =====
+    1 | {
+    2 |   "name": "my-three-vite",
+    3 |   "version": "1.0.0",
+    4 |   "lockfileVersion": 3,
+    5 |   "requires": true,
+    6 |   "packages": {
+    7 |     "": {
+    8 |       "name": "my-three-vite",
+    9 |       "version": "1.0.0",
+   10 |       "license": "ISC",
+   11 |       "dependencies": {
+   12 |         "all": "^0.0.0",
+   13 |         "three": "^0.180.0"
+   14 |       },
+   15 |       "devDependencies": {
+   16 |         "vite": "^7.1.9"
+   17 |       }
+   18 |     },
+   19 |     "node_modules/@esbuild/aix-ppc64": {
+   20 |       "version": "0.25.9",
+   21 |       "resolved": "https://registry.npmjs.org/@esbuild/aix-ppc64/-/aix-ppc64-0.25.9.tgz",
+   22 |       "integrity": "sha512-OaGtL73Jck6pBKjNIe24BnFE6agGl+6KxDtTfHhy1HmhthfKouEcOhqpSL64K4/0WCtbKFLOdzD/44cJ4k9opA==",
+   23 |       "cpu": [
+   24 |         "ppc64"
+   25 |       ],
+   26 |       "dev": true,
+   27 |       "license": "MIT",
+   28 |       "optional": true,
+   29 |       "os": [
+   30 |         "aix"
+   31 |       ],
+   32 |       "engines": {
+   33 |         "node": ">=18"
+   34 |       }
+   35 |     },
+   36 |     "node_modules/@esbuild/android-arm": {
+   37 |       "version": "0.25.9",
+   38 |       "resolved": "https://registry.npmjs.org/@esbuild/android-arm/-/android-arm-0.25.9.tgz",
+   39 |       "integrity": "sha512-5WNI1DaMtxQ7t7B6xa572XMXpHAaI/9Hnhk8lcxF4zVN4xstUgTlvuGDorBguKEnZO70qwEcLpfifMLoxiPqHQ==",
+   40 |       "cpu": [
+   41 |         "arm"
+   42 |       ],
+   43 |       "dev": true,
+   44 |       "license": "MIT",
+   45 |       "optional": true,
+   46 |       "os": [
+   47 |         "android"
+   48 |       ],
+   49 |       "engines": {
+   50 |         "node": ">=18"
+   51 |       }
+   52 |     },
+   53 |     "node_modules/@esbuild/android-arm64": {
+   54 |       "version": "0.25.9",
+   55 |       "resolved": "https://registry.npmjs.org/@esbuild/android-arm64/-/android-arm64-0.25.9.tgz",
+   56 |       "integrity": "sha512-IDrddSmpSv51ftWslJMvl3Q2ZT98fUSL2/rlUXuVqRXHCs5EUF1/f+jbjF5+NG9UffUDMCiTyh8iec7u8RlTLg==",
+   57 |       "cpu": [
+   58 |         "arm64"
+   59 |       ],
+   60 |       "dev": true,
+   61 |       "license": "MIT",
+   62 |       "optional": true,
+   63 |       "os": [
+   64 |         "android"
+   65 |       ],
+   66 |       "engines": {
+   67 |         "node": ">=18"
+   68 |       }
+   69 |     },
+   70 |     "node_modules/@esbuild/android-x64": {
+   71 |       "version": "0.25.9",
+   72 |       "resolved": "https://registry.npmjs.org/@esbuild/android-x64/-/android-x64-0.25.9.tgz",
+   73 |       "integrity": "sha512-I853iMZ1hWZdNllhVZKm34f4wErd4lMyeV7BLzEExGEIZYsOzqDWDf+y082izYUE8gtJnYHdeDpN/6tUdwvfiw==",
+   74 |       "cpu": [
+   75 |         "x64"
+   76 |       ],
+   77 |       "dev": true,
+   78 |       "license": "MIT",
+   79 |       "optional": true,
+   80 |       "os": [
+   81 |         "android"
+   82 |       ],
+   83 |       "engines": {
+   84 |         "node": ">=18"
+   85 |       }
+   86 |     },
+   87 |     "node_modules/@esbuild/darwin-arm64": {
+   88 |       "version": "0.25.9",
+   89 |       "resolved": "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.25.9.tgz",
+   90 |       "integrity": "sha512-XIpIDMAjOELi/9PB30vEbVMs3GV1v2zkkPnuyRRURbhqjyzIINwj+nbQATh4H9GxUgH1kFsEyQMxwiLFKUS6Rg==",
+   91 |       "cpu": [
+   92 |         "arm64"
+   93 |       ],
+   94 |       "dev": true,
+   95 |       "license": "MIT",
+   96 |       "optional": true,
+   97 |       "os": [
+   98 |         "darwin"
+   99 |       ],
+  100 |       "engines": {
+  101 |         "node": ">=18"
+  102 |       }
+  103 |     },
+  104 |     "node_modules/@esbuild/darwin-x64": {
+  105 |       "version": "0.25.9",
+  106 |       "resolved": "https://registry.npmjs.org/@esbuild/darwin-x64/-/darwin-x64-0.25.9.tgz",
+  107 |       "integrity": "sha512-jhHfBzjYTA1IQu8VyrjCX4ApJDnH+ez+IYVEoJHeqJm9VhG9Dh2BYaJritkYK3vMaXrf7Ogr/0MQ8/MeIefsPQ==",
+  108 |       "cpu": [
+  109 |         "x64"
+  110 |       ],
+  111 |       "dev": true,
+  112 |       "license": "MIT",
+  113 |       "optional": true,
+  114 |       "os": [
+  115 |         "darwin"
+  116 |       ],
+  117 |       "engines": {
+  118 |         "node": ">=18"
+  119 |       }
+  120 |     },
+  121 |     "node_modules/@esbuild/freebsd-arm64": {
+  122 |       "version": "0.25.9",
+  123 |       "resolved": "https://registry.npmjs.org/@esbuild/freebsd-arm64/-/freebsd-arm64-0.25.9.tgz",
+  124 |       "integrity": "sha512-z93DmbnY6fX9+KdD4Ue/H6sYs+bhFQJNCPZsi4XWJoYblUqT06MQUdBCpcSfuiN72AbqeBFu5LVQTjfXDE2A6Q==",
+  125 |       "cpu": [
+  126 |         "arm64"
+  127 |       ],
+  128 |       "dev": true,
+  129 |       "license": "MIT",
+  130 |       "optional": true,
+  131 |       "os": [
+  132 |         "freebsd"
+  133 |       ],
+  134 |       "engines": {
+  135 |         "node": ">=18"
+  136 |       }
+  137 |     },
+  138 |     "node_modules/@esbuild/freebsd-x64": {
+  139 |       "version": "0.25.9",
+  140 |       "resolved": "https://registry.npmjs.org/@esbuild/freebsd-x64/-/freebsd-x64-0.25.9.tgz",
+  141 |       "integrity": "sha512-mrKX6H/vOyo5v71YfXWJxLVxgy1kyt1MQaD8wZJgJfG4gq4DpQGpgTB74e5yBeQdyMTbgxp0YtNj7NuHN0PoZg==",
+  142 |       "cpu": [
+  143 |         "x64"
+  144 |       ],
+  145 |       "dev": true,
+  146 |       "license": "MIT",
+  147 |       "optional": true,
+  148 |       "os": [
+  149 |         "freebsd"
+  150 |       ],
+  151 |       "engines": {
+  152 |         "node": ">=18"
+  153 |       }
+  154 |     },
+  155 |     "node_modules/@esbuild/linux-arm": {
+  156 |       "version": "0.25.9",
+  157 |       "resolved": "https://registry.npmjs.org/@esbuild/linux-arm/-/linux-arm-0.25.9.tgz",
+  158 |       "integrity": "sha512-HBU2Xv78SMgaydBmdor38lg8YDnFKSARg1Q6AT0/y2ezUAKiZvc211RDFHlEZRFNRVhcMamiToo7bDx3VEOYQw==",
+  159 |       "cpu": [
+  160 |         "arm"
+  161 |       ],
+  162 |       "dev": true,
+  163 |       "license": "MIT",
+  164 |       "optional": true,
+  165 |       "os": [
+  166 |         "linux"
+  167 |       ],
+  168 |       "engines": {
+  169 |         "node": ">=18"
+  170 |       }
+  171 |     },
+  172 |     "node_modules/@esbuild/linux-arm64": {
+  173 |       "version": "0.25.9",
+  174 |       "resolved": "https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.25.9.tgz",
+  175 |       "integrity": "sha512-BlB7bIcLT3G26urh5Dmse7fiLmLXnRlopw4s8DalgZ8ef79Jj4aUcYbk90g8iCa2467HX8SAIidbL7gsqXHdRw==",
+  176 |       "cpu": [
+  177 |         "arm64"
+  178 |       ],
+  179 |       "dev": true,
+  180 |       "license": "MIT",
+  181 |       "optional": true,
+  182 |       "os": [
+  183 |         "linux"
+  184 |       ],
+  185 |       "engines": {
+  186 |         "node": ">=18"
+  187 |       }
+  188 |     },
+  189 |     "node_modules/@esbuild/linux-ia32": {
+  190 |       "version": "0.25.9",
+  191 |       "resolved": "https://registry.npmjs.org/@esbuild/linux-ia32/-/linux-ia32-0.25.9.tgz",
+  192 |       "integrity": "sha512-e7S3MOJPZGp2QW6AK6+Ly81rC7oOSerQ+P8L0ta4FhVi+/j/v2yZzx5CqqDaWjtPFfYz21Vi1S0auHrap3Ma3A==",
+  193 |       "cpu": [
+  194 |         "ia32"
+  195 |       ],
+  196 |       "dev": true,
+  197 |       "license": "MIT",
+  198 |       "optional": true,
+  199 |       "os": [
+  200 |         "linux"
+  201 |       ],
+  202 |       "engines": {
+  203 |         "node": ">=18"
+  204 |       }
+  205 |     },
+  206 |     "node_modules/@esbuild/linux-loong64": {
+  207 |       "version": "0.25.9",
+  208 |       "resolved": "https://registry.npmjs.org/@esbuild/linux-loong64/-/linux-loong64-0.25.9.tgz",
+  209 |       "integrity": "sha512-Sbe10Bnn0oUAB2AalYztvGcK+o6YFFA/9829PhOCUS9vkJElXGdphz0A3DbMdP8gmKkqPmPcMJmJOrI3VYB1JQ==",
+  210 |       "cpu": [
+  211 |         "loong64"
+  212 |       ],
+  213 |       "dev": true,
+  214 |       "license": "MIT",
+  215 |       "optional": true,
+  216 |       "os": [
+  217 |         "linux"
+  218 |       ],
+  219 |       "engines": {
+  220 |         "node": ">=18"
+  221 |       }
+  222 |     },
+  223 |     "node_modules/@esbuild/linux-mips64el": {
+  224 |       "version": "0.25.9",
+  225 |       "resolved": "https://registry.npmjs.org/@esbuild/linux-mips64el/-/linux-mips64el-0.25.9.tgz",
+  226 |       "integrity": "sha512-YcM5br0mVyZw2jcQeLIkhWtKPeVfAerES5PvOzaDxVtIyZ2NUBZKNLjC5z3/fUlDgT6w89VsxP2qzNipOaaDyA==",
+  227 |       "cpu": [
+  228 |         "mips64el"
+  229 |       ],
+  230 |       "dev": true,
+  231 |       "license": "MIT",
+  232 |       "optional": true,
+  233 |       "os": [
+  234 |         "linux"
+  235 |       ],
+  236 |       "engines": {
+  237 |         "node": ">=18"
+  238 |       }
+  239 |     },
+  240 |     "node_modules/@esbuild/linux-ppc64": {
+  241 |       "version": "0.25.9",
+  242 |       "resolved": "https://registry.npmjs.org/@esbuild/linux-ppc64/-/linux-ppc64-0.25.9.tgz",
+  243 |       "integrity": "sha512-++0HQvasdo20JytyDpFvQtNrEsAgNG2CY1CLMwGXfFTKGBGQT3bOeLSYE2l1fYdvML5KUuwn9Z8L1EWe2tzs1w==",
+  244 |       "cpu": [
+  245 |         "ppc64"
+  246 |       ],
+  247 |       "dev": true,
+  248 |       "license": "MIT",
+  249 |       "optional": true,
+  250 |       "os": [
+  251 |         "linux"
+  252 |       ],
+  253 |       "engines": {
+  254 |         "node": ">=18"
+  255 |       }
+  256 |     },
+  257 |     "node_modules/@esbuild/linux-riscv64": {
+  258 |       "version": "0.25.9",
+  259 |       "resolved": "https://registry.npmjs.org/@esbuild/linux-riscv64/-/linux-riscv64-0.25.9.tgz",
+  260 |       "integrity": "sha512-uNIBa279Y3fkjV+2cUjx36xkx7eSjb8IvnL01eXUKXez/CBHNRw5ekCGMPM0BcmqBxBcdgUWuUXmVWwm4CH9kg==",
+  261 |       "cpu": [
+  262 |         "riscv64"
+  263 |       ],
+  264 |       "dev": true,
+  265 |       "license": "MIT",
+  266 |       "optional": true,
+  267 |       "os": [
+  268 |         "linux"
+  269 |       ],
+  270 |       "engines": {
+  271 |         "node": ">=18"
+  272 |       }
+  273 |     },
+  274 |     "node_modules/@esbuild/linux-s390x": {
+  275 |       "version": "0.25.9",
+  276 |       "resolved": "https://registry.npmjs.org/@esbuild/linux-s390x/-/linux-s390x-0.25.9.tgz",
+  277 |       "integrity": "sha512-Mfiphvp3MjC/lctb+7D287Xw1DGzqJPb/J2aHHcHxflUo+8tmN/6d4k6I2yFR7BVo5/g7x2Monq4+Yew0EHRIA==",
+  278 |       "cpu": [
+  279 |         "s390x"
+  280 |       ],
+  281 |       "dev": true,
+  282 |       "license": "MIT",
+  283 |       "optional": true,
+  284 |       "os": [
+  285 |         "linux"
+  286 |       ],
+  287 |       "engines": {
+  288 |         "node": ">=18"
+  289 |       }
+  290 |     },
+  291 |     "node_modules/@esbuild/linux-x64": {
+  292 |       "version": "0.25.9",
+  293 |       "resolved": "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.25.9.tgz",
+  294 |       "integrity": "sha512-iSwByxzRe48YVkmpbgoxVzn76BXjlYFXC7NvLYq+b+kDjyyk30J0JY47DIn8z1MO3K0oSl9fZoRmZPQI4Hklzg==",
+  295 |       "cpu": [
+  296 |         "x64"
+  297 |       ],
+  298 |       "dev": true,
+  299 |       "license": "MIT",
+  300 |       "optional": true,
+  301 |       "os": [
+  302 |         "linux"
+  303 |       ],
+  304 |       "engines": {
+  305 |         "node": ">=18"
+  306 |       }
+  307 |     },
+  308 |     "node_modules/@esbuild/netbsd-arm64": {
+  309 |       "version": "0.25.9",
+  310 |       "resolved": "https://registry.npmjs.org/@esbuild/netbsd-arm64/-/netbsd-arm64-0.25.9.tgz",
+  311 |       "integrity": "sha512-9jNJl6FqaUG+COdQMjSCGW4QiMHH88xWbvZ+kRVblZsWrkXlABuGdFJ1E9L7HK+T0Yqd4akKNa/lO0+jDxQD4Q==",
+  312 |       "cpu": [
+  313 |         "arm64"
+  314 |       ],
+  315 |       "dev": true,
+  316 |       "license": "MIT",
+  317 |       "optional": true,
+  318 |       "os": [
+  319 |         "netbsd"
+  320 |       ],
+  321 |       "engines": {
+  322 |         "node": ">=18"
+  323 |       }
+  324 |     },
+  325 |     "node_modules/@esbuild/netbsd-x64": {
+  326 |       "version": "0.25.9",
+  327 |       "resolved": "https://registry.npmjs.org/@esbuild/netbsd-x64/-/netbsd-x64-0.25.9.tgz",
+  328 |       "integrity": "sha512-RLLdkflmqRG8KanPGOU7Rpg829ZHu8nFy5Pqdi9U01VYtG9Y0zOG6Vr2z4/S+/3zIyOxiK6cCeYNWOFR9QP87g==",
+  329 |       "cpu": [
+  330 |         "x64"
+  331 |       ],
+  332 |       "dev": true,
+  333 |       "license": "MIT",
+  334 |       "optional": true,
+  335 |       "os": [
+  336 |         "netbsd"
+  337 |       ],
+  338 |       "engines": {
+  339 |         "node": ">=18"
+  340 |       }
+  341 |     },
+  342 |     "node_modules/@esbuild/openbsd-arm64": {
+  343 |       "version": "0.25.9",
+  344 |       "resolved": "https://registry.npmjs.org/@esbuild/openbsd-arm64/-/openbsd-arm64-0.25.9.tgz",
+  345 |       "integrity": "sha512-YaFBlPGeDasft5IIM+CQAhJAqS3St3nJzDEgsgFixcfZeyGPCd6eJBWzke5piZuZ7CtL656eOSYKk4Ls2C0FRQ==",
+  346 |       "cpu": [
+  347 |         "arm64"
+  348 |       ],
+  349 |       "dev": true,
+  350 |       "license": "MIT",
+  351 |       "optional": true,
+  352 |       "os": [
+  353 |         "openbsd"
+  354 |       ],
+  355 |       "engines": {
+  356 |         "node": ">=18"
+  357 |       }
+  358 |     },
+  359 |     "node_modules/@esbuild/openbsd-x64": {
+  360 |       "version": "0.25.9",
+  361 |       "resolved": "https://registry.npmjs.org/@esbuild/openbsd-x64/-/openbsd-x64-0.25.9.tgz",
+  362 |       "integrity": "sha512-1MkgTCuvMGWuqVtAvkpkXFmtL8XhWy+j4jaSO2wxfJtilVCi0ZE37b8uOdMItIHz4I6z1bWWtEX4CJwcKYLcuA==",
+  363 |       "cpu": [
+  364 |         "x64"
+  365 |       ],
+  366 |       "dev": true,
+  367 |       "license": "MIT",
+  368 |       "optional": true,
+  369 |       "os": [
+  370 |         "openbsd"
+  371 |       ],
+  372 |       "engines": {
+  373 |         "node": ">=18"
+  374 |       }
+  375 |     },
+  376 |     "node_modules/@esbuild/openharmony-arm64": {
+  377 |       "version": "0.25.9",
+  378 |       "resolved": "https://registry.npmjs.org/@esbuild/openharmony-arm64/-/openharmony-arm64-0.25.9.tgz",
+  379 |       "integrity": "sha512-4Xd0xNiMVXKh6Fa7HEJQbrpP3m3DDn43jKxMjxLLRjWnRsfxjORYJlXPO4JNcXtOyfajXorRKY9NkOpTHptErg==",
+  380 |       "cpu": [
+  381 |         "arm64"
+  382 |       ],
+  383 |       "dev": true,
+  384 |       "license": "MIT",
+  385 |       "optional": true,
+  386 |       "os": [
+  387 |         "openharmony"
+  388 |       ],
+  389 |       "engines": {
+  390 |         "node": ">=18"
+  391 |       }
+  392 |     },
+  393 |     "node_modules/@esbuild/sunos-x64": {
+  394 |       "version": "0.25.9",
+  395 |       "resolved": "https://registry.npmjs.org/@esbuild/sunos-x64/-/sunos-x64-0.25.9.tgz",
+  396 |       "integrity": "sha512-WjH4s6hzo00nNezhp3wFIAfmGZ8U7KtrJNlFMRKxiI9mxEK1scOMAaa9i4crUtu+tBr+0IN6JCuAcSBJZfnphw==",
+  397 |       "cpu": [
+  398 |         "x64"
+  399 |       ],
+  400 |       "dev": true,
+  401 |       "license": "MIT",
+  402 |       "optional": true,
+  403 |       "os": [
+  404 |         "sunos"
+  405 |       ],
+  406 |       "engines": {
+  407 |         "node": ">=18"
+  408 |       }
+  409 |     },
+  410 |     "node_modules/@esbuild/win32-arm64": {
+  411 |       "version": "0.25.9",
+  412 |       "resolved": "https://registry.npmjs.org/@esbuild/win32-arm64/-/win32-arm64-0.25.9.tgz",
+  413 |       "integrity": "sha512-mGFrVJHmZiRqmP8xFOc6b84/7xa5y5YvR1x8djzXpJBSv/UsNK6aqec+6JDjConTgvvQefdGhFDAs2DLAds6gQ==",
+  414 |       "cpu": [
+  415 |         "arm64"
+  416 |       ],
+  417 |       "dev": true,
+  418 |       "license": "MIT",
+  419 |       "optional": true,
+  420 |       "os": [
+  421 |         "win32"
+  422 |       ],
+  423 |       "engines": {
+  424 |         "node": ">=18"
+  425 |       }
+  426 |     },
+  427 |     "node_modules/@esbuild/win32-ia32": {
+  428 |       "version": "0.25.9",
+  429 |       "resolved": "https://registry.npmjs.org/@esbuild/win32-ia32/-/win32-ia32-0.25.9.tgz",
+  430 |       "integrity": "sha512-b33gLVU2k11nVx1OhX3C8QQP6UHQK4ZtN56oFWvVXvz2VkDoe6fbG8TOgHFxEvqeqohmRnIHe5A1+HADk4OQww==",
+  431 |       "cpu": [
+  432 |         "ia32"
+  433 |       ],
+  434 |       "dev": true,
+  435 |       "license": "MIT",
+  436 |       "optional": true,
+  437 |       "os": [
+  438 |         "win32"
+  439 |       ],
+  440 |       "engines": {
+  441 |         "node": ">=18"
+  442 |       }
+  443 |     },
+  444 |     "node_modules/@esbuild/win32-x64": {
+  445 |       "version": "0.25.9",
+  446 |       "resolved": "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.25.9.tgz",
+  447 |       "integrity": "sha512-PPOl1mi6lpLNQxnGoyAfschAodRFYXJ+9fs6WHXz7CSWKbOqiMZsubC+BQsVKuul+3vKLuwTHsS2c2y9EoKwxQ==",
+  448 |       "cpu": [
+  449 |         "x64"
+  450 |       ],
+  451 |       "dev": true,
+  452 |       "license": "MIT",
+  453 |       "optional": true,
+  454 |       "os": [
+  455 |         "win32"
+  456 |       ],
+  457 |       "engines": {
+  458 |         "node": ">=18"
+  459 |       }
+  460 |     },
+  461 |     "node_modules/@rollup/rollup-android-arm-eabi": {
+  462 |       "version": "4.50.2",
+  463 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-android-arm-eabi/-/rollup-android-arm-eabi-4.50.2.tgz",
+  464 |       "integrity": "sha512-uLN8NAiFVIRKX9ZQha8wy6UUs06UNSZ32xj6giK/rmMXAgKahwExvK6SsmgU5/brh4w/nSgj8e0k3c1HBQpa0A==",
+  465 |       "cpu": [
+  466 |         "arm"
+  467 |       ],
+  468 |       "dev": true,
+  469 |       "license": "MIT",
+  470 |       "optional": true,
+  471 |       "os": [
+  472 |         "android"
+  473 |       ]
+  474 |     },
+  475 |     "node_modules/@rollup/rollup-android-arm64": {
+  476 |       "version": "4.50.2",
+  477 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-android-arm64/-/rollup-android-arm64-4.50.2.tgz",
+  478 |       "integrity": "sha512-oEouqQk2/zxxj22PNcGSskya+3kV0ZKH+nQxuCCOGJ4oTXBdNTbv+f/E3c74cNLeMO1S5wVWacSws10TTSB77g==",
+  479 |       "cpu": [
+  480 |         "arm64"
+  481 |       ],
+  482 |       "dev": true,
+  483 |       "license": "MIT",
+  484 |       "optional": true,
+  485 |       "os": [
+  486 |         "android"
+  487 |       ]
+  488 |     },
+  489 |     "node_modules/@rollup/rollup-darwin-arm64": {
+  490 |       "version": "4.50.2",
+  491 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-darwin-arm64/-/rollup-darwin-arm64-4.50.2.tgz",
+  492 |       "integrity": "sha512-OZuTVTpj3CDSIxmPgGH8en/XtirV5nfljHZ3wrNwvgkT5DQLhIKAeuFSiwtbMto6oVexV0k1F1zqURPKf5rI1Q==",
+  493 |       "cpu": [
+  494 |         "arm64"
+  495 |       ],
+  496 |       "dev": true,
+  497 |       "license": "MIT",
+  498 |       "optional": true,
+  499 |       "os": [
+  500 |         "darwin"
+  501 |       ]
+  502 |     },
+  503 |     "node_modules/@rollup/rollup-darwin-x64": {
+  504 |       "version": "4.50.2",
+  505 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-darwin-x64/-/rollup-darwin-x64-4.50.2.tgz",
+  506 |       "integrity": "sha512-Wa/Wn8RFkIkr1vy1k1PB//VYhLnlnn5eaJkfTQKivirOvzu5uVd2It01ukeQstMursuz7S1bU+8WW+1UPXpa8A==",
+  507 |       "cpu": [
+  508 |         "x64"
+  509 |       ],
+  510 |       "dev": true,
+  511 |       "license": "MIT",
+  512 |       "optional": true,
+  513 |       "os": [
+  514 |         "darwin"
+  515 |       ]
+  516 |     },
+  517 |     "node_modules/@rollup/rollup-freebsd-arm64": {
+  518 |       "version": "4.50.2",
+  519 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-freebsd-arm64/-/rollup-freebsd-arm64-4.50.2.tgz",
+  520 |       "integrity": "sha512-QkzxvH3kYN9J1w7D1A+yIMdI1pPekD+pWx7G5rXgnIlQ1TVYVC6hLl7SOV9pi5q9uIDF9AuIGkuzcbF7+fAhow==",
+  521 |       "cpu": [
+  522 |         "arm64"
+  523 |       ],
+  524 |       "dev": true,
+  525 |       "license": "MIT",
+  526 |       "optional": true,
+  527 |       "os": [
+  528 |         "freebsd"
+  529 |       ]
+  530 |     },
+  531 |     "node_modules/@rollup/rollup-freebsd-x64": {
+  532 |       "version": "4.50.2",
+  533 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-freebsd-x64/-/rollup-freebsd-x64-4.50.2.tgz",
+  534 |       "integrity": "sha512-dkYXB0c2XAS3a3jmyDkX4Jk0m7gWLFzq1C3qUnJJ38AyxIF5G/dyS4N9B30nvFseCfgtCEdbYFhk0ChoCGxPog==",
+  535 |       "cpu": [
+  536 |         "x64"
+  537 |       ],
+  538 |       "dev": true,
+  539 |       "license": "MIT",
+  540 |       "optional": true,
+  541 |       "os": [
+  542 |         "freebsd"
+  543 |       ]
+  544 |     },
+  545 |     "node_modules/@rollup/rollup-linux-arm-gnueabihf": {
+  546 |       "version": "4.50.2",
+  547 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm-gnueabihf/-/rollup-linux-arm-gnueabihf-4.50.2.tgz",
+  548 |       "integrity": "sha512-9VlPY/BN3AgbukfVHAB8zNFWB/lKEuvzRo1NKev0Po8sYFKx0i+AQlCYftgEjcL43F2h9Ui1ZSdVBc4En/sP2w==",
+  549 |       "cpu": [
+  550 |         "arm"
+  551 |       ],
+  552 |       "dev": true,
+  553 |       "license": "MIT",
+  554 |       "optional": true,
+  555 |       "os": [
+  556 |         "linux"
+  557 |       ]
+  558 |     },
+  559 |     "node_modules/@rollup/rollup-linux-arm-musleabihf": {
+  560 |       "version": "4.50.2",
+  561 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm-musleabihf/-/rollup-linux-arm-musleabihf-4.50.2.tgz",
+  562 |       "integrity": "sha512-+GdKWOvsifaYNlIVf07QYan1J5F141+vGm5/Y8b9uCZnG/nxoGqgCmR24mv0koIWWuqvFYnbURRqw1lv7IBINw==",
+  563 |       "cpu": [
+  564 |         "arm"
+  565 |       ],
+  566 |       "dev": true,
+  567 |       "license": "MIT",
+  568 |       "optional": true,
+  569 |       "os": [
+  570 |         "linux"
+  571 |       ]
+  572 |     },
+  573 |     "node_modules/@rollup/rollup-linux-arm64-gnu": {
+  574 |       "version": "4.50.2",
+  575 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm64-gnu/-/rollup-linux-arm64-gnu-4.50.2.tgz",
+  576 |       "integrity": "sha512-df0Eou14ojtUdLQdPFnymEQteENwSJAdLf5KCDrmZNsy1c3YaCNaJvYsEUHnrg+/DLBH612/R0xd3dD03uz2dg==",
+  577 |       "cpu": [
+  578 |         "arm64"
+  579 |       ],
+  580 |       "dev": true,
+  581 |       "license": "MIT",
+  582 |       "optional": true,
+  583 |       "os": [
+  584 |         "linux"
+  585 |       ]
+  586 |     },
+  587 |     "node_modules/@rollup/rollup-linux-arm64-musl": {
+  588 |       "version": "4.50.2",
+  589 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm64-musl/-/rollup-linux-arm64-musl-4.50.2.tgz",
+  590 |       "integrity": "sha512-iPeouV0UIDtz8j1YFR4OJ/zf7evjauqv7jQ/EFs0ClIyL+by++hiaDAfFipjOgyz6y6xbDvJuiU4HwpVMpRFDQ==",
+  591 |       "cpu": [
+  592 |         "arm64"
+  593 |       ],
+  594 |       "dev": true,
+  595 |       "license": "MIT",
+  596 |       "optional": true,
+  597 |       "os": [
+  598 |         "linux"
+  599 |       ]
+  600 |     },
+  601 |     "node_modules/@rollup/rollup-linux-loong64-gnu": {
+  602 |       "version": "4.50.2",
+  603 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-loong64-gnu/-/rollup-linux-loong64-gnu-4.50.2.tgz",
+  604 |       "integrity": "sha512-OL6KaNvBopLlj5fTa5D5bau4W82f+1TyTZRr2BdnfsrnQnmdxh4okMxR2DcDkJuh4KeoQZVuvHvzuD/lyLn2Kw==",
+  605 |       "cpu": [
+  606 |         "loong64"
+  607 |       ],
+  608 |       "dev": true,
+  609 |       "license": "MIT",
+  610 |       "optional": true,
+  611 |       "os": [
+  612 |         "linux"
+  613 |       ]
+  614 |     },
+  615 |     "node_modules/@rollup/rollup-linux-ppc64-gnu": {
+  616 |       "version": "4.50.2",
+  617 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-ppc64-gnu/-/rollup-linux-ppc64-gnu-4.50.2.tgz",
+  618 |       "integrity": "sha512-I21VJl1w6z/K5OTRl6aS9DDsqezEZ/yKpbqlvfHbW0CEF5IL8ATBMuUx6/mp683rKTK8thjs/0BaNrZLXetLag==",
+  619 |       "cpu": [
+  620 |         "ppc64"
+  621 |       ],
+  622 |       "dev": true,
+  623 |       "license": "MIT",
+  624 |       "optional": true,
+  625 |       "os": [
+  626 |         "linux"
+  627 |       ]
+  628 |     },
+  629 |     "node_modules/@rollup/rollup-linux-riscv64-gnu": {
+  630 |       "version": "4.50.2",
+  631 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-riscv64-gnu/-/rollup-linux-riscv64-gnu-4.50.2.tgz",
+  632 |       "integrity": "sha512-Hq6aQJT/qFFHrYMjS20nV+9SKrXL2lvFBENZoKfoTH2kKDOJqff5OSJr4x72ZaG/uUn+XmBnGhfr4lwMRrmqCQ==",
+  633 |       "cpu": [
+  634 |         "riscv64"
+  635 |       ],
+  636 |       "dev": true,
+  637 |       "license": "MIT",
+  638 |       "optional": true,
+  639 |       "os": [
+  640 |         "linux"
+  641 |       ]
+  642 |     },
+  643 |     "node_modules/@rollup/rollup-linux-riscv64-musl": {
+  644 |       "version": "4.50.2",
+  645 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-riscv64-musl/-/rollup-linux-riscv64-musl-4.50.2.tgz",
+  646 |       "integrity": "sha512-82rBSEXRv5qtKyr0xZ/YMF531oj2AIpLZkeNYxmKNN6I2sVE9PGegN99tYDLK2fYHJITL1P2Lgb4ZXnv0PjQvw==",
+  647 |       "cpu": [
+  648 |         "riscv64"
+  649 |       ],
+  650 |       "dev": true,
+  651 |       "license": "MIT",
+  652 |       "optional": true,
+  653 |       "os": [
+  654 |         "linux"
+  655 |       ]
+  656 |     },
+  657 |     "node_modules/@rollup/rollup-linux-s390x-gnu": {
+  658 |       "version": "4.50.2",
+  659 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-s390x-gnu/-/rollup-linux-s390x-gnu-4.50.2.tgz",
+  660 |       "integrity": "sha512-4Q3S3Hy7pC6uaRo9gtXUTJ+EKo9AKs3BXKc2jYypEcMQ49gDPFU2P1ariX9SEtBzE5egIX6fSUmbmGazwBVF9w==",
+  661 |       "cpu": [
+  662 |         "s390x"
+  663 |       ],
+  664 |       "dev": true,
+  665 |       "license": "MIT",
+  666 |       "optional": true,
+  667 |       "os": [
+  668 |         "linux"
+  669 |       ]
+  670 |     },
+  671 |     "node_modules/@rollup/rollup-linux-x64-gnu": {
+  672 |       "version": "4.50.2",
+  673 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-x64-gnu/-/rollup-linux-x64-gnu-4.50.2.tgz",
+  674 |       "integrity": "sha512-9Jie/At6qk70dNIcopcL4p+1UirusEtznpNtcq/u/C5cC4HBX7qSGsYIcG6bdxj15EYWhHiu02YvmdPzylIZlA==",
+  675 |       "cpu": [
+  676 |         "x64"
+  677 |       ],
+  678 |       "dev": true,
+  679 |       "license": "MIT",
+  680 |       "optional": true,
+  681 |       "os": [
+  682 |         "linux"
+  683 |       ]
+  684 |     },
+  685 |     "node_modules/@rollup/rollup-linux-x64-musl": {
+  686 |       "version": "4.50.2",
+  687 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-x64-musl/-/rollup-linux-x64-musl-4.50.2.tgz",
+  688 |       "integrity": "sha512-HPNJwxPL3EmhzeAnsWQCM3DcoqOz3/IC6de9rWfGR8ZCuEHETi9km66bH/wG3YH0V3nyzyFEGUZeL5PKyy4xvw==",
+  689 |       "cpu": [
+  690 |         "x64"
+  691 |       ],
+  692 |       "dev": true,
+  693 |       "license": "MIT",
+  694 |       "optional": true,
+  695 |       "os": [
+  696 |         "linux"
+  697 |       ]
+  698 |     },
+  699 |     "node_modules/@rollup/rollup-openharmony-arm64": {
+  700 |       "version": "4.50.2",
+  701 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-openharmony-arm64/-/rollup-openharmony-arm64-4.50.2.tgz",
+  702 |       "integrity": "sha512-nMKvq6FRHSzYfKLHZ+cChowlEkR2lj/V0jYj9JnGUVPL2/mIeFGmVM2mLaFeNa5Jev7W7TovXqXIG2d39y1KYA==",
+  703 |       "cpu": [
+  704 |         "arm64"
+  705 |       ],
+  706 |       "dev": true,
+  707 |       "license": "MIT",
+  708 |       "optional": true,
+  709 |       "os": [
+  710 |         "openharmony"
+  711 |       ]
+  712 |     },
+  713 |     "node_modules/@rollup/rollup-win32-arm64-msvc": {
+  714 |       "version": "4.50.2",
+  715 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-arm64-msvc/-/rollup-win32-arm64-msvc-4.50.2.tgz",
+  716 |       "integrity": "sha512-eFUvvnTYEKeTyHEijQKz81bLrUQOXKZqECeiWH6tb8eXXbZk+CXSG2aFrig2BQ/pjiVRj36zysjgILkqarS2YA==",
+  717 |       "cpu": [
+  718 |         "arm64"
+  719 |       ],
+  720 |       "dev": true,
+  721 |       "license": "MIT",
+  722 |       "optional": true,
+  723 |       "os": [
+  724 |         "win32"
+  725 |       ]
+  726 |     },
+  727 |     "node_modules/@rollup/rollup-win32-ia32-msvc": {
+  728 |       "version": "4.50.2",
+  729 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-ia32-msvc/-/rollup-win32-ia32-msvc-4.50.2.tgz",
+  730 |       "integrity": "sha512-cBaWmXqyfRhH8zmUxK3d3sAhEWLrtMjWBRwdMMHJIXSjvjLKvv49adxiEz+FJ8AP90apSDDBx2Tyd/WylV6ikA==",
+  731 |       "cpu": [
+  732 |         "ia32"
+  733 |       ],
+  734 |       "dev": true,
+  735 |       "license": "MIT",
+  736 |       "optional": true,
+  737 |       "os": [
+  738 |         "win32"
+  739 |       ]
+  740 |     },
+  741 |     "node_modules/@rollup/rollup-win32-x64-msvc": {
+  742 |       "version": "4.50.2",
+  743 |       "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.50.2.tgz",
+  744 |       "integrity": "sha512-APwKy6YUhvZaEoHyM+9xqmTpviEI+9eL7LoCH+aLcvWYHJ663qG5zx7WzWZY+a9qkg5JtzcMyJ9z0WtQBMDmgA==",
+  745 |       "cpu": [
+  746 |         "x64"
+  747 |       ],
+  748 |       "dev": true,
+  749 |       "license": "MIT",
+  750 |       "optional": true,
+  751 |       "os": [
+  752 |         "win32"
+  753 |       ]
+  754 |     },
+  755 |     "node_modules/@types/estree": {
+  756 |       "version": "1.0.8",
+  757 |       "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.8.tgz",
+  758 |       "integrity": "sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==",
+  759 |       "dev": true,
+  760 |       "license": "MIT"
+  761 |     },
+  762 |     "node_modules/all": {
+  763 |       "version": "0.0.0",
+  764 |       "resolved": "https://registry.npmjs.org/all/-/all-0.0.0.tgz",
+  765 |       "integrity": "sha512-0oKlfNVv2d+d7c1gwjGspzgbwot47PGQ4b3v1ccx4mR8l9P/Y6E6Dr/yE8lNT63EcAKEbHo6UG3odDpC/NQcKw==",
+  766 |       "license": "MIT"
+  767 |     },
+  768 |     "node_modules/esbuild": {
+  769 |       "version": "0.25.9",
+  770 |       "resolved": "https://registry.npmjs.org/esbuild/-/esbuild-0.25.9.tgz",
+  771 |       "integrity": "sha512-CRbODhYyQx3qp7ZEwzxOk4JBqmD/seJrzPa/cGjY1VtIn5E09Oi9/dB4JwctnfZ8Q8iT7rioVv5k/FNT/uf54g==",
+  772 |       "dev": true,
+  773 |       "hasInstallScript": true,
+  774 |       "license": "MIT",
+  775 |       "bin": {
+  776 |         "esbuild": "bin/esbuild"
+  777 |       },
+  778 |       "engines": {
+  779 |         "node": ">=18"
+  780 |       },
+  781 |       "optionalDependencies": {
+  782 |         "@esbuild/aix-ppc64": "0.25.9",
+  783 |         "@esbuild/android-arm": "0.25.9",
+  784 |         "@esbuild/android-arm64": "0.25.9",
+  785 |         "@esbuild/android-x64": "0.25.9",
+  786 |         "@esbuild/darwin-arm64": "0.25.9",
+  787 |         "@esbuild/darwin-x64": "0.25.9",
+  788 |         "@esbuild/freebsd-arm64": "0.25.9",
+  789 |         "@esbuild/freebsd-x64": "0.25.9",
+  790 |         "@esbuild/linux-arm": "0.25.9",
+  791 |         "@esbuild/linux-arm64": "0.25.9",
+  792 |         "@esbuild/linux-ia32": "0.25.9",
+  793 |         "@esbuild/linux-loong64": "0.25.9",
+  794 |         "@esbuild/linux-mips64el": "0.25.9",
+  795 |         "@esbuild/linux-ppc64": "0.25.9",
+  796 |         "@esbuild/linux-riscv64": "0.25.9",
+  797 |         "@esbuild/linux-s390x": "0.25.9",
+  798 |         "@esbuild/linux-x64": "0.25.9",
+  799 |         "@esbuild/netbsd-arm64": "0.25.9",
+  800 |         "@esbuild/netbsd-x64": "0.25.9",
+  801 |         "@esbuild/openbsd-arm64": "0.25.9",
+  802 |         "@esbuild/openbsd-x64": "0.25.9",
+  803 |         "@esbuild/openharmony-arm64": "0.25.9",
+  804 |         "@esbuild/sunos-x64": "0.25.9",
+  805 |         "@esbuild/win32-arm64": "0.25.9",
+  806 |         "@esbuild/win32-ia32": "0.25.9",
+  807 |         "@esbuild/win32-x64": "0.25.9"
+  808 |       }
+  809 |     },
+  810 |     "node_modules/fdir": {
+  811 |       "version": "6.5.0",
+  812 |       "resolved": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz",
+  813 |       "integrity": "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==",
+  814 |       "dev": true,
+  815 |       "license": "MIT",
+  816 |       "engines": {
+  817 |         "node": ">=12.0.0"
+  818 |       },
+  819 |       "peerDependencies": {
+  820 |         "picomatch": "^3 || ^4"
+  821 |       },
+  822 |       "peerDependenciesMeta": {
+  823 |         "picomatch": {
+  824 |           "optional": true
+  825 |         }
+  826 |       }
+  827 |     },
+  828 |     "node_modules/fsevents": {
+  829 |       "version": "2.3.3",
+  830 |       "resolved": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz",
+  831 |       "integrity": "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==",
+  832 |       "dev": true,
+  833 |       "hasInstallScript": true,
+  834 |       "license": "MIT",
+  835 |       "optional": true,
+  836 |       "os": [
+  837 |         "darwin"
+  838 |       ],
+  839 |       "engines": {
+  840 |         "node": "^8.16.0 || ^10.6.0 || >=11.0.0"
+  841 |       }
+  842 |     },
+  843 |     "node_modules/nanoid": {
+  844 |       "version": "3.3.11",
+  845 |       "resolved": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.11.tgz",
+  846 |       "integrity": "sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==",
+  847 |       "dev": true,
+  848 |       "funding": [
+  849 |         {
+  850 |           "type": "github",
+  851 |           "url": "https://github.com/sponsors/ai"
+  852 |         }
+  853 |       ],
+  854 |       "license": "MIT",
+  855 |       "bin": {
+  856 |         "nanoid": "bin/nanoid.cjs"
+  857 |       },
+  858 |       "engines": {
+  859 |         "node": "^10 || ^12 || ^13.7 || ^14 || >=15.0.1"
+  860 |       }
+  861 |     },
+  862 |     "node_modules/picocolors": {
+  863 |       "version": "1.1.1",
+  864 |       "resolved": "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz",
+  865 |       "integrity": "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==",
+  866 |       "dev": true,
+  867 |       "license": "ISC"
+  868 |     },
+  869 |     "node_modules/picomatch": {
+  870 |       "version": "4.0.3",
+  871 |       "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.3.tgz",
+  872 |       "integrity": "sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==",
+  873 |       "dev": true,
+  874 |       "license": "MIT",
+  875 |       "engines": {
+  876 |         "node": ">=12"
+  877 |       },
+  878 |       "funding": {
+  879 |         "url": "https://github.com/sponsors/jonschlinkert"
+  880 |       }
+  881 |     },
+  882 |     "node_modules/postcss": {
+  883 |       "version": "8.5.6",
+  884 |       "resolved": "https://registry.npmjs.org/postcss/-/postcss-8.5.6.tgz",
+  885 |       "integrity": "sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==",
+  886 |       "dev": true,
+  887 |       "funding": [
+  888 |         {
+  889 |           "type": "opencollective",
+  890 |           "url": "https://opencollective.com/postcss/"
+  891 |         },
+  892 |         {
+  893 |           "type": "tidelift",
+  894 |           "url": "https://tidelift.com/funding/github/npm/postcss"
+  895 |         },
+  896 |         {
+  897 |           "type": "github",
+  898 |           "url": "https://github.com/sponsors/ai"
+  899 |         }
+  900 |       ],
+  901 |       "license": "MIT",
+  902 |       "dependencies": {
+  903 |         "nanoid": "^3.3.11",
+  904 |         "picocolors": "^1.1.1",
+  905 |         "source-map-js": "^1.2.1"
+  906 |       },
+  907 |       "engines": {
+  908 |         "node": "^10 || ^12 || >=14"
+  909 |       }
+  910 |     },
+  911 |     "node_modules/rollup": {
+  912 |       "version": "4.50.2",
+  913 |       "resolved": "https://registry.npmjs.org/rollup/-/rollup-4.50.2.tgz",
+  914 |       "integrity": "sha512-BgLRGy7tNS9H66aIMASq1qSYbAAJV6Z6WR4QYTvj5FgF15rZ/ympT1uixHXwzbZUBDbkvqUI1KR0fH1FhMaQ9w==",
+  915 |       "dev": true,
+  916 |       "license": "MIT",
+  917 |       "dependencies": {
+  918 |         "@types/estree": "1.0.8"
+  919 |       },
+  920 |       "bin": {
+  921 |         "rollup": "dist/bin/rollup"
+  922 |       },
+  923 |       "engines": {
+  924 |         "node": ">=18.0.0",
+  925 |         "npm": ">=8.0.0"
+  926 |       },
+  927 |       "optionalDependencies": {
+  928 |         "@rollup/rollup-android-arm-eabi": "4.50.2",
+  929 |         "@rollup/rollup-android-arm64": "4.50.2",
+  930 |         "@rollup/rollup-darwin-arm64": "4.50.2",
+  931 |         "@rollup/rollup-darwin-x64": "4.50.2",
+  932 |         "@rollup/rollup-freebsd-arm64": "4.50.2",
+  933 |         "@rollup/rollup-freebsd-x64": "4.50.2",
+  934 |         "@rollup/rollup-linux-arm-gnueabihf": "4.50.2",
+  935 |         "@rollup/rollup-linux-arm-musleabihf": "4.50.2",
+  936 |         "@rollup/rollup-linux-arm64-gnu": "4.50.2",
+  937 |         "@rollup/rollup-linux-arm64-musl": "4.50.2",
+  938 |         "@rollup/rollup-linux-loong64-gnu": "4.50.2",
+  939 |         "@rollup/rollup-linux-ppc64-gnu": "4.50.2",
+  940 |         "@rollup/rollup-linux-riscv64-gnu": "4.50.2",
+  941 |         "@rollup/rollup-linux-riscv64-musl": "4.50.2",
+  942 |         "@rollup/rollup-linux-s390x-gnu": "4.50.2",
+  943 |         "@rollup/rollup-linux-x64-gnu": "4.50.2",
+  944 |         "@rollup/rollup-linux-x64-musl": "4.50.2",
+  945 |         "@rollup/rollup-openharmony-arm64": "4.50.2",
+  946 |         "@rollup/rollup-win32-arm64-msvc": "4.50.2",
+  947 |         "@rollup/rollup-win32-ia32-msvc": "4.50.2",
+  948 |         "@rollup/rollup-win32-x64-msvc": "4.50.2",
+  949 |         "fsevents": "~2.3.2"
+  950 |       }
+  951 |     },
+  952 |     "node_modules/source-map-js": {
+  953 |       "version": "1.2.1",
+  954 |       "resolved": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.1.tgz",
+  955 |       "integrity": "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==",
+  956 |       "dev": true,
+  957 |       "license": "BSD-3-Clause",
+  958 |       "engines": {
+  959 |         "node": ">=0.10.0"
+  960 |       }
+  961 |     },
+  962 |     "node_modules/three": {
+  963 |       "version": "0.180.0",
+  964 |       "resolved": "https://registry.npmjs.org/three/-/three-0.180.0.tgz",
+  965 |       "integrity": "sha512-o+qycAMZrh+TsE01GqWUxUIKR1AL0S8pq7zDkYOQw8GqfX8b8VoCKYUoHbhiX5j+7hr8XsuHDVU6+gkQJQKg9w==",
+  966 |       "license": "MIT"
+  967 |     },
+  968 |     "node_modules/tinyglobby": {
+  969 |       "version": "0.2.15",
+  970 |       "resolved": "https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.15.tgz",
+  971 |       "integrity": "sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==",
+  972 |       "dev": true,
+  973 |       "license": "MIT",
+  974 |       "dependencies": {
+  975 |         "fdir": "^6.5.0",
+  976 |         "picomatch": "^4.0.3"
+  977 |       },
+  978 |       "engines": {
+  979 |         "node": ">=12.0.0"
+  980 |       },
+  981 |       "funding": {
+  982 |         "url": "https://github.com/sponsors/SuperchupuDev"
+  983 |       }
+  984 |     },
+  985 |     "node_modules/vite": {
+  986 |       "version": "7.1.9",
+  987 |       "resolved": "https://registry.npmjs.org/vite/-/vite-7.1.9.tgz",
+  988 |       "integrity": "sha512-4nVGliEpxmhCL8DslSAUdxlB6+SMrhB0a1v5ijlh1xB1nEPuy1mxaHxysVucLHuWryAxLWg6a5ei+U4TLn/rFg==",
+  989 |       "dev": true,
+  990 |       "license": "MIT",
+  991 |       "dependencies": {
+  992 |         "esbuild": "^0.25.0",
+  993 |         "fdir": "^6.5.0",
+  994 |         "picomatch": "^4.0.3",
+  995 |         "postcss": "^8.5.6",
+  996 |         "rollup": "^4.43.0",
+  997 |         "tinyglobby": "^0.2.15"
+  998 |       },
+  999 |       "bin": {
+ 1000 |         "vite": "bin/vite.js"
+ 1001 |       },
+ 1002 |       "engines": {
+ 1003 |         "node": "^20.19.0 || >=22.12.0"
+ 1004 |       },
+ 1005 |       "funding": {
+ 1006 |         "url": "https://github.com/vitejs/vite?sponsor=1"
+ 1007 |       },
+ 1008 |       "optionalDependencies": {
+ 1009 |         "fsevents": "~2.3.3"
+ 1010 |       },
+ 1011 |       "peerDependencies": {
+ 1012 |         "@types/node": "^20.19.0 || >=22.12.0",
+ 1013 |         "jiti": ">=1.21.0",
+ 1014 |         "less": "^4.0.0",
+ 1015 |         "lightningcss": "^1.21.0",
+ 1016 |         "sass": "^1.70.0",
+ 1017 |         "sass-embedded": "^1.70.0",
+ 1018 |         "stylus": ">=0.54.8",
+ 1019 |         "sugarss": "^5.0.0",
+ 1020 |         "terser": "^5.16.0",
+ 1021 |         "tsx": "^4.8.1",
+ 1022 |         "yaml": "^2.4.2"
+ 1023 |       },
+ 1024 |       "peerDependenciesMeta": {
+ 1025 |         "@types/node": {
+ 1026 |           "optional": true
+ 1027 |         },
+ 1028 |         "jiti": {
+ 1029 |           "optional": true
+ 1030 |         },
+ 1031 |         "less": {
+ 1032 |           "optional": true
+ 1033 |         },
+ 1034 |         "lightningcss": {
+ 1035 |           "optional": true
+ 1036 |         },
+ 1037 |         "sass": {
+ 1038 |           "optional": true
+ 1039 |         },
+ 1040 |         "sass-embedded": {
+ 1041 |           "optional": true
+ 1042 |         },
+ 1043 |         "stylus": {
+ 1044 |           "optional": true
+ 1045 |         },
+ 1046 |         "sugarss": {
+ 1047 |           "optional": true
+ 1048 |         },
+ 1049 |         "terser": {
+ 1050 |           "optional": true
+ 1051 |         },
+ 1052 |         "tsx": {
+ 1053 |           "optional": true
+ 1054 |         },
+ 1055 |         "yaml": {
+ 1056 |           "optional": true
+ 1057 |         }
+ 1058 |       }
+ 1059 |     }
+ 1060 |   }
+ 1061 | }
+ 1062 | 
+===== END FILE: package-lock.json =====
+
+===== FILE: package.json =====
+    1 | {
+    2 |   "name": "my-three-vite",
+    3 |   "version": "1.0.0",
+    4 |   "description": "",
+    5 |   "main": "index.js",
+    6 |   "scripts": {
+    7 |     "dev": "vite",
+    8 |     "build": "vite build",
+    9 |     "preview": "vite preview"
+   10 |   },
+   11 |   "keywords": [],
+   12 |   "author": "",
+   13 |   "license": "ISC",
+   14 |   "type": "commonjs",
+   15 |   "dependencies": {
+   16 |     "all": "^0.0.0",
+   17 |     "three": "^0.180.0"
+   18 |   },
+   19 |   "devDependencies": {
+   20 |     "vite": "^7.1.9"
+   21 |   }
+   22 | }
+   23 | 
+===== END FILE: package.json =====
+
+===== FILE: src/carcross.js =====
+    1 | import * as THREE from 'three';
+    2 | import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+    3 | import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+    4 | import { CharacterControls } from './characterControls.js';
+    5 | 
+    6 | // ------------------- Scene & Camera -------------------
+    7 | const scene = new THREE.Scene();
+    8 | scene.background = new THREE.Color(0x87ceeb);
+    9 | 
+   10 | const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
+   11 | camera.position.set(0, 20, 40);
+   12 | camera.lookAt(0, 0, 0);
+   13 | 
+   14 | const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+   15 | renderer.setSize(innerWidth, innerHeight);
+   16 | renderer.setPixelRatio(window.devicePixelRatio);
+   17 | renderer.shadowMap.enabled = true;
+   18 | document.body.appendChild(renderer.domElement);
+   19 | 
+   20 | // ------------------- Lights -------------------
+   21 | scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+   22 | 
+   23 | const sun = new THREE.DirectionalLight(0xfff2cc, 1.1);
+   24 | sun.position.set(20, 40, 20);
+   25 | sun.castShadow = true;
+   26 | sun.shadow.mapSize.set(2048, 2048);
+   27 | sun.shadow.camera.near = 0.1;
+   28 | sun.shadow.camera.far = 150;
+   29 | sun.shadow.camera.left = -50;
+   30 | sun.shadow.camera.right = 50;
+   31 | sun.shadow.camera.top = 50;
+   32 | sun.shadow.camera.bottom = -50;
+   33 | sun.shadow.bias = -0.001;
+   34 | sun.shadow.normalBias = 0.02;
+   35 | scene.add(sun);
+   36 | 
+   37 | // ------------------- Ground -------------------
+   38 | const ground = new THREE.Mesh(
+   39 |   new THREE.PlaneGeometry(400, 400),
+   40 |   new THREE.MeshPhongMaterial({ color: 0x5e8056 })
+   41 | );
+   42 | ground.rotation.x = -Math.PI / 2;
+   43 | ground.receiveShadow = true;
+   44 | scene.add(ground);
+   45 | 
+   46 | // ------------------- Controls -------------------
+   47 | const controls = new OrbitControls(camera, renderer.domElement);
+   48 | controls.enableDamping = true;
+   49 | controls.dampingFactor = 0.06;
+   50 | controls.target.set(0, 0, 0);
+   51 | 
+   52 | // ------------------- Loaders -------------------
+   53 | const loader = new GLTFLoader();
+   54 | 
+   55 | // Vehicle templates
+   56 | let carTemplate1 = null;
+   57 | let carTemplate2 = null;
+   58 | 
+   59 | // Lanes
+   60 | const laneSpecs = [
+   61 |   { x: -4.0, speed: 6.0, dir: 1, template: 'car1', count: 3, spacing: 18, startZ: -60 },
+   62 |   { x:  0.0, speed: 8.0, dir: -1, template: 'car2', count: 2, spacing: 22, startZ:  60 },
+   63 |   { x:  4.0, speed: 7.0, dir: 1, template: 'car1', count: 2, spacing: 24, startZ: -60 },
+   64 | ];
+   65 | const lanes = [];
+   66 | 
+   67 | // ------------------- Helper Functions -------------------
+   68 | function setShadowFlags(object3d) {
+   69 |   object3d.traverse((obj) => {
+   70 |     if (obj.isMesh) {
+   71 |       obj.castShadow = true;
+   72 |       obj.receiveShadow = true;
+   73 |     }
+   74 |   });
+   75 | }
+   76 | 
+   77 | function findByNameDeep(root, nameLower) {
+   78 |   let found = null;
+   79 |   root.traverse((child) => {
+   80 |     if (found) return;
+   81 |     const n = (child.name || '').toLowerCase();
+   82 |     if (n === nameLower) found = child;
+   83 |   });
+   84 |   return found;
+   85 | }
+   86 | 
+   87 | function cloneVehicle(template, x, z) {
+   88 |   if (!template) return null;
+   89 |   let clone;
+   90 |   if (template.isMesh) {
+   91 |     clone = template.clone(true);
+   92 |   } else {
+   93 |     // if group, clone the first mesh child
+   94 |     const mesh = template.getObjectByProperty('type', 'Mesh');
+   95 |     clone = mesh ? mesh.clone(true) : template.clone(true);
+   96 |   }
+   97 |   setShadowFlags(clone);
+   98 |   clone.position.set(x, 0, z);
+   99 |   scene.add(clone);
+  100 |   return clone;
+  101 | }
+  102 | 
+  103 | function buildLanes() {
+  104 |   const minZ = -60;
+  105 |   const maxZ = 60;
+  106 | 
+  107 |   laneSpecs.forEach((spec) => {
+  108 |     const template = spec.template === 'car1' ? carTemplate1 : carTemplate2;
+  109 |     if (!template) return;
+  110 | 
+  111 |     const vehicles = [];
+  112 |     for (let i = 0; i < spec.count; i++) {
+  113 |       const z = spec.startZ + (spec.dir > 0 ? i * spec.spacing : -i * spec.spacing);
+  114 |       const mesh = cloneVehicle(template, spec.x, z);
+  115 |       if (mesh) vehicles.push({ mesh, speed: spec.speed, dir: spec.dir });
+  116 |     }
+  117 |     lanes.push({ x: spec.x, vehicles, minZ, maxZ });
+  118 |   });
+  119 | }
+  120 | 
+  121 | // ------------------- Load Environment -------------------
+  122 | loader.load(
+  123 |   '/models/scene.glb',
+  124 |   (gltf) => {
+  125 |     const env = gltf.scene;
+  126 |     setShadowFlags(env);
+  127 |     scene.add(env);
+  128 | 
+  129 |     // Find car templates
+  130 |     carTemplate1 = findByNameDeep(env, 'car1');
+  131 |     carTemplate2 = findByNameDeep(env, 'car2');
+  132 | 
+  133 |     if (!carTemplate1 && !carTemplate2) {
+  134 |       console.warn('No car1/car2 found in scene.glb');
+  135 |     }
+  136 | 
+  137 |     if (carTemplate1) carTemplate1.visible = false;
+  138 |     if (carTemplate2) carTemplate2.visible = false;
+  139 | 
+  140 |     buildLanes();
+  141 |   },
+  142 |   undefined,
+  143 |   (err) => console.error('Failed to load environment scene.glb', err)
+  144 | );
+  145 | 
+  146 | // ------------------- Load Character -------------------
+  147 | let characterControls = null;
+  148 | let playerModel = null;
+  149 | 
+  150 | loader.load(
+  151 |   '/models/Soldier.glb',
+  152 |   (gltf) => {
+  153 |     playerModel = gltf.scene;
+  154 |     setShadowFlags(playerModel);
+  155 |     playerModel.position.set(0, 0, 0);
+  156 |     scene.add(playerModel);
+  157 | 
+  158 |     const mixer = new THREE.AnimationMixer(playerModel);
+  159 |     const animationsMap = new Map();
+  160 |     gltf.animations.forEach((clip) => {
+  161 |       animationsMap.set(clip.name, mixer.clipAction(clip));
+  162 |     });
+  163 | 
+  164 |     characterControls = new CharacterControls(playerModel, mixer, animationsMap, controls, camera, 'Idle');
+  165 |   },
+  166 |   undefined,
+  167 |   (err) => console.error('Failed to load Soldier.glb', err)
+  168 | );
+  169 | 
+  170 | // ------------------- Input -------------------
+  171 | const keysPressed = {};
+  172 | document.addEventListener('keydown', (e) => {
+  173 |   keysPressed[e.key.toLowerCase()] = true;
+  174 |   if (e.key === ' ') {
+  175 |     e.preventDefault();
+  176 |     if (characterControls) characterControls.switchRunToggle();
+  177 |   }
+  178 | });
+  179 | document.addEventListener('keyup', (e) => {
+  180 |   keysPressed[e.key.toLowerCase()] = false;
+  181 | });
+  182 | 
+  183 | // ------------------- Animate -------------------
+  184 | const clock = new THREE.Clock();
+  185 | 
+  186 | renderer.setAnimationLoop(() => {
+  187 |   const dt = clock.getDelta();
+  188 | 
+  189 |   // Update character
+  190 |   if (characterControls) characterControls.update(dt, keysPressed);
+  191 |   else controls.update();
+  192 | 
+  193 |   // Move vehicles
+  194 |   lanes.forEach((lane) => {
+  195 |     lane.vehicles.forEach((v) => {
+  196 |       v.mesh.position.z += v.speed * dt * v.dir;
+  197 |       if (v.dir > 0 && v.mesh.position.z > lane.maxZ) v.mesh.position.z = lane.minZ;
+  198 |       if (v.dir < 0 && v.mesh.position.z < lane.minZ) v.mesh.position.z = lane.maxZ;
+  199 |     });
+  200 |   });
+  201 | 
+  202 |   // Simple collision
+  203 |   if (playerModel) {
+  204 |     const playerBox = new THREE.Box3().setFromObject(playerModel);
+  205 |     let hit = false;
+  206 |     for (const lane of lanes) {
+  207 |       for (const v of lane.vehicles) {
+  208 |         const box = new THREE.Box3().setFromObject(v.mesh);
+  209 |         if (playerBox.intersectsBox(box)) { hit = true; break; }
+  210 |       }
+  211 |       if (hit) {
+  212 |         // Reset player
+  213 |         playerModel.position.set(0, 0, 0);
+  214 |         break;
+  215 |       }
+  216 |     }
+  217 |   }
+  218 | 
+  219 |   renderer.render(scene, camera);
+  220 | });
+  221 | 
+  222 | // ------------------- Resize -------------------
+  223 | window.addEventListener('resize', () => {
+  224 |   camera.aspect = innerWidth / innerHeight;
+  225 |   camera.updateProjectionMatrix();
+  226 |   renderer.setSize(innerWidth, innerHeight);
+  227 | });
+  228 | 
+===== END FILE: src/carcross.js =====
+
+===== FILE: src/characterControls.js =====
+    1 | import * as THREE from 'three';
+    2 | 
+    3 | export class CharacterControls {
+    4 | 
+    5 |     model;
+    6 |     mixer;
+    7 |     animationsMap = new Map(); // Walk, Run, Idle
+    8 |     orbitControl;
+    9 |     camera;
+   10 | 
+   11 |     toggleRun = true;
+   12 |     currentAction;
+   13 | 
+   14 |     walkDirection = new THREE.Vector3();
+   15 |     rotateAngle = new THREE.Vector3(0, 1, 0);
+   16 |     rotateQuarternion = new THREE.Quaternion();
+   17 |     baseOrientation = new THREE.Quaternion();
+   18 |     cameraTarget = new THREE.Vector3();
+   19 | 
+   20 |     fadeDuration = 0.2;
+   21 |     runVelocity = 10;
+   22 |     walkVelocity = 4;
+   23 | 
+   24 |     constructor(model, mixer, animationsMap, orbitControl, camera, currentAction, upAxis = 'Y', forwardOffsetRadians = 0) {
+   25 |         this.model = model;
+   26 |         this.mixer = mixer;
+   27 |         this.animationsMap = animationsMap;
+   28 |         this.currentAction = currentAction;
+   29 | 
+   30 |         this.animationsMap.forEach((value, key) => {
+   31 |             if (key === currentAction) value.play();
+   32 |         });
+   33 | 
+   34 |         this.orbitControl = orbitControl;
+   35 |         this.camera = camera;
+   36 |         this.upAxis = upAxis;
+   37 |         this.modelForwardOffsetRadians = forwardOffsetRadians;
+   38 |         // Ensure yaw rotation happens around the correct up axis and store base orientation
+   39 |         this.rotateAngle = (this.upAxis === 'Z') ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0);
+   40 |         this.baseOrientation.copy(this.model.quaternion);
+   41 |         this.updateCameraTarget(0, 0);
+   42 |     }
+   43 | 
+   44 |     switchRunToggle() {
+   45 |         this.toggleRun = !this.toggleRun;
+   46 |     }
+   47 | 
+   48 |     update(delta, keysPressed) {
+   49 |         const directionPressed = ['w', 'a', 's', 'd'].some(k => keysPressed[k] === true);
+   50 | 
+   51 |         let play = '';
+   52 |         if (directionPressed && this.toggleRun) play = 'Run';
+   53 |         else if (directionPressed) play = 'Walk';
+   54 |         else play = 'Idle';
+   55 | 
+   56 |         if (this.currentAction !== play) {
+   57 |             const toPlay = this.animationsMap.get(play);
+   58 |             const current = this.animationsMap.get(this.currentAction);
+   59 |             if (current && toPlay) {
+   60 |                 current.fadeOut(this.fadeDuration);
+   61 |                 toPlay.reset().fadeIn(this.fadeDuration).play();
+   62 |             }
+   63 |             this.currentAction = play;
+   64 |         }
+   65 | 
+   66 |         this.mixer.update(delta);
+   67 | 
+   68 |         if (this.currentAction === 'Run' || this.currentAction === 'Walk') {
+   69 |             const dx = this.camera.position.x - this.model.position.x;
+   70 |             const dzOrDy = this.upAxis === 'Z' ?
+   71 |                 (this.camera.position.y - this.model.position.y) :
+   72 |                 (this.camera.position.z - this.model.position.z);
+   73 |             const angleYCameraDirection = Math.atan2(dx, dzOrDy);
+   74 | 
+   75 |             const directionOffset = this.directionOffset(keysPressed);
+   76 | 
+   77 |             const yawQuat = new THREE.Quaternion().setFromAxisAngle(this.rotateAngle, angleYCameraDirection + directionOffset + this.modelForwardOffsetRadians);
+   78 |             const targetQuat = new THREE.Quaternion().copy(yawQuat).multiply(this.baseOrientation);
+   79 |             this.model.quaternion.rotateTowards(targetQuat, 0.2);
+   80 | 
+   81 |             // Get camera forward projected onto ground plane (Z-up => XY plane)
+   82 |             this.camera.getWorldDirection(this.walkDirection);
+   83 |             if (this.upAxis === 'Z') {
+   84 |                 // Zero vertical component and renormalize
+   85 |                 this.walkDirection.z = 0;
+   86 |             } else {
+   87 |                 this.walkDirection.y = 0;
+   88 |             }
+   89 |             this.walkDirection.normalize();
+   90 |             this.walkDirection.applyAxisAngle(this.rotateAngle, directionOffset);
+   91 | 
+   92 |             const velocity = this.currentAction === 'Run' ? this.runVelocity : this.walkVelocity;
+   93 | 
+   94 |             const moveX = this.walkDirection.x * velocity * delta;
+   95 |             const moveT = (this.upAxis === 'Z' ? this.walkDirection.y : this.walkDirection.z) * velocity * delta;
+   96 |             this.model.position.x += moveX;
+   97 |             if (this.upAxis === 'Z') this.model.position.y += moveT; else this.model.position.z += moveT;
+   98 | 
+   99 |             this.updateCameraTarget(moveX, moveT);
+  100 |         }
+  101 |     }
+  102 | 
+  103 |     updateCameraTarget(moveX, moveT) {
+  104 |         this.camera.position.x += moveX;
+  105 |         if (this.upAxis === 'Z') this.camera.position.y += moveT; else this.camera.position.z += moveT;
+  106 | 
+  107 |         this.cameraTarget.x = this.model.position.x;
+  108 |         if (this.upAxis === 'Z') {
+  109 |             this.cameraTarget.y = this.model.position.y;
+  110 |             this.cameraTarget.z = this.model.position.z + 1.6;
+  111 |         } else {
+  112 |             this.cameraTarget.y = this.model.position.y + 1.6;
+  113 |             this.cameraTarget.z = this.model.position.z;
+  114 |         }
+  115 |         this.orbitControl.target.copy(this.cameraTarget);
+  116 |     }
+  117 | 
+  118 |     directionOffset(keysPressed) {
+  119 |         let directionOffset = 0;
+  120 | 
+  121 |         if (keysPressed['w']) {
+  122 |             if (keysPressed['a']) directionOffset = Math.PI / 4;
+  123 |             else if (keysPressed['d']) directionOffset = -Math.PI / 4;
+  124 |         } else if (keysPressed['s']) {
+  125 |             if (keysPressed['a']) directionOffset = Math.PI / 4 + Math.PI / 2;
+  126 |             else if (keysPressed['d']) directionOffset = -Math.PI / 4 - Math.PI / 2;
+  127 |             else directionOffset = Math.PI;
+  128 |         } else if (keysPressed['a']) directionOffset = Math.PI / 2;
+  129 |         else if (keysPressed['d']) directionOffset = -Math.PI / 2;
+  130 | 
+  131 |         return directionOffset;
+  132 |     }
+  133 | }
+  134 | 
+===== END FILE: src/characterControls.js =====
+
+===== FILE: src/crossRoad.js =====
+    1 | /*
+    2 | Crossy Road + CharacterControls integration
+    3 | -------------------------------------------
+    4 | Soldier.glb is controlled using WASD keys via CharacterControls.
+    5 | The world (cars, trees, etc.) remains from your Crossy Road environment.
+    6 | */
+    7 | 
+    8 | import * as THREE from 'three';
+    9 | import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+   10 | import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+   11 | import { CharacterControls } from "./characterControls.js";
+   12 | 
+   13 | // --------------------------------------------------
+   14 | // Scene setup
+   15 | // --------------------------------------------------
+   16 | const scene = new THREE.Scene();
+   17 | 
+   18 | // Camera setup
+   19 | function Camera() {
+   20 |   const size = 300;
+   21 |   const viewRatio = window.innerWidth / window.innerHeight;
+   22 |   const width = viewRatio < 1 ? size : size * viewRatio;
+   23 |   const height = viewRatio < 1 ? size / viewRatio : size;
+   24 | 
+   25 |   const camera = new THREE.OrthographicCamera(
+   26 |     width / -2,
+   27 |     width / 2,
+   28 |     height / 2,
+   29 |     height / -2,
+   30 |     100,
+   31 |     900
+   32 |   );
+   33 | 
+   34 |   camera.up.set(0, 0, 1);
+   35 |   camera.position.set(300, -300, 300);
+   36 |   camera.lookAt(0, 0, 0);
+   37 | 
+   38 |   return camera;
+   39 | }
+   40 | const camera = Camera();
+   41 | scene.add(camera);
+   42 | const renderer = new THREE.WebGLRenderer({
+   43 |   canvas: document.querySelector('canvas.game'),
+   44 |   antialias: true,
+   45 |   alpha: true,
+   46 | });
+   47 | renderer.setSize(window.innerWidth, window.innerHeight);
+   48 | renderer.setPixelRatio(window.devicePixelRatio);
+   49 | renderer.shadowMap.enabled = true;
+   50 | const controls = new OrbitControls(camera, renderer.domElement);
+   51 | controls.enableDamping = true;
+   52 | controls.enabled = false; // we'll drive camera manually for a steady follow
+   53 | 
+   54 | // --------------------------------------------------
+   55 | // Lighting
+   56 | // --------------------------------------------------
+   57 | function DirectionalLight() {
+   58 |   const dirLight = new THREE.DirectionalLight();
+   59 |   dirLight.position.set(-100, -100, 200);
+   60 |   dirLight.up.set(0, 0, 1);
+   61 |   dirLight.castShadow = true;
+   62 | 
+   63 |   dirLight.shadow.mapSize.width = 2048;
+   64 |   dirLight.shadow.mapSize.height = 2048;
+   65 |   dirLight.shadow.camera.left = -400;
+   66 |   dirLight.shadow.camera.right = 400;
+   67 |   dirLight.shadow.camera.top = 400;
+   68 |   dirLight.shadow.camera.bottom = -400;
+   69 |   dirLight.shadow.camera.near = 50;
+   70 |   dirLight.shadow.camera.far = 400;
+   71 | 
+   72 |   return dirLight;
+   73 | }
+   74 | const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+   75 | scene.add(ambientLight);
+   76 | const dirLight = DirectionalLight();
+   77 | scene.add(dirLight);
+   78 | 
+   79 | // --------------------------------------------------
+   80 | // Environment (Grass, Roads, Cars, etc.)
+   81 | // --------------------------------------------------
+   82 | const minTileIndex = -8;
+   83 | const maxTileIndex = 8;
+   84 | const tilesPerRow = maxTileIndex - minTileIndex + 1;
+   85 | const tileSize = 42;
+   86 | 
+   87 | function Texture(width, height, rects) {
+   88 |   const canvas = document.createElement("canvas");
+   89 |   canvas.width = width;
+   90 |   canvas.height = height;
+   91 |   const context = canvas.getContext("2d");
+   92 |   context.fillStyle = "#ffffff";
+   93 |   context.fillRect(0, 0, width, height);
+   94 |   context.fillStyle = "rgba(0,0,0,0.6)";
+   95 |   rects.forEach((r) => context.fillRect(r.x, r.y, r.w, r.h));
+   96 |   return new THREE.CanvasTexture(canvas);
+   97 | }
+   98 | 
+   99 | const carFrontTexture = new Texture(40, 80, [{ x: 0, y: 10, w: 30, h: 60 }]);
+  100 | const carBackTexture = new Texture(40, 80, [{ x: 10, y: 10, w: 30, h: 60 }]);
+  101 | const carRightSideTexture = new Texture(110, 40, [
+  102 |   { x: 10, y: 0, w: 50, h: 30 },
+  103 |   { x: 70, y: 0, w: 30, h: 30 },
+  104 | ]);
+  105 | const carLeftSideTexture = new Texture(110, 40, [
+  106 |   { x: 10, y: 10, w: 50, h: 30 },
+  107 |   { x: 70, y: 10, w: 30, h: 30 },
+  108 | ]);
+  109 | 
+  110 | function Wheel(x) {
+  111 |   const wheel = new THREE.Mesh(
+  112 |     new THREE.BoxGeometry(12, 33, 12),
+  113 |     new THREE.MeshLambertMaterial({ color: 0x333333, flatShading: true })
+  114 |   );
+  115 |   wheel.position.x = x;
+  116 |   wheel.position.z = 6;
+  117 |   return wheel;
+  118 | }
+  119 | 
+  120 | function Car(initialTileIndex, direction, color) {
+  121 |   const car = new THREE.Group();
+  122 |   car.position.x = initialTileIndex * tileSize;
+  123 |   if (!direction) car.rotation.z = Math.PI;
+  124 | 
+  125 |   const main = new THREE.Mesh(
+  126 |     new THREE.BoxGeometry(60, 30, 15),
+  127 |     new THREE.MeshLambertMaterial({ color, flatShading: true })
+  128 |   );
+  129 |   main.position.z = 12;
+  130 |   car.add(main);
+  131 | 
+  132 |   const cabin = new THREE.Mesh(new THREE.BoxGeometry(33, 24, 12), [
+  133 |     new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true, map: carBackTexture }),
+  134 |     new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true, map: carFrontTexture }),
+  135 |     new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true, map: carRightSideTexture }),
+  136 |     new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true, map: carLeftSideTexture }),
+  137 |     new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true }),
+  138 |     new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true }),
+  139 |   ]);
+  140 |   cabin.position.x = -6;
+  141 |   cabin.position.z = 25.5;
+  142 |   car.add(cabin);
+  143 | 
+  144 |   car.add(Wheel(18));
+  145 |   car.add(Wheel(-18));
+  146 | 
+  147 |   return car;
+  148 | }
+  149 | 
+  150 | function Truck(initialTileIndex, direction, color) {
+  151 |   const truck = new THREE.Group();
+  152 |   truck.position.x = initialTileIndex * tileSize;
+  153 |   if (!direction) truck.rotation.z = Math.PI;
+  154 | 
+  155 |   const cargo = new THREE.Mesh(
+  156 |     new THREE.BoxGeometry(70, 35, 35),
+  157 |     new THREE.MeshLambertMaterial({ color: 0xb4c6fc, flatShading: true })
+  158 |   );
+  159 |   cargo.position.x = -15;
+  160 |   cargo.position.z = 25;
+  161 |   cargo.castShadow = true;
+  162 |   cargo.receiveShadow = true;
+  163 |   truck.add(cargo);
+  164 | 
+  165 |   const cabin = new THREE.Mesh(new THREE.BoxGeometry(30, 30, 30), [
+  166 |     new THREE.MeshLambertMaterial({ color, flatShading: true }),
+  167 |     new THREE.MeshLambertMaterial({ color, flatShading: true }),
+  168 |     new THREE.MeshLambertMaterial({ color, flatShading: true }),
+  169 |     new THREE.MeshLambertMaterial({ color, flatShading: true }),
+  170 |     new THREE.MeshPhongMaterial({ color, flatShading: true }),
+  171 |     new THREE.MeshPhongMaterial({ color, flatShading: true }),
+  172 |   ]);
+  173 |   cabin.position.x = 35;
+  174 |   cabin.position.z = 20;
+  175 |   cabin.castShadow = true;
+  176 |   cabin.receiveShadow = true;
+  177 |   truck.add(cabin);
+  178 | 
+  179 |   truck.add(Wheel(37));
+  180 |   truck.add(Wheel(5));
+  181 |   truck.add(Wheel(-35));
+  182 | 
+  183 |   return truck;
+  184 | }
+  185 | 
+  186 | function Grass(rowIndex) {
+  187 |   const grass = new THREE.Group();
+  188 |   grass.position.y = rowIndex * tileSize;
+  189 | 
+  190 |   const section = (color) =>
+  191 |     new THREE.Mesh(
+  192 |       new THREE.BoxGeometry(tilesPerRow * tileSize, tileSize, 3),
+  193 |       new THREE.MeshLambertMaterial({ color })
+  194 |     );
+  195 | 
+  196 |   const middle = section(0xbaf455);
+  197 |   middle.receiveShadow = true;
+  198 |   grass.add(middle);
+  199 | 
+  200 |   const left = section(0x99c846);
+  201 |   left.position.x = -tilesPerRow * tileSize;
+  202 |   grass.add(left);
+  203 | 
+  204 |   const right = section(0x99c846);
+  205 |   right.position.x = tilesPerRow * tileSize;
+  206 |   grass.add(right);
+  207 | 
+  208 |   return grass;
+  209 | }
+  210 | 
+  211 | function Road(rowIndex) {
+  212 |   const road = new THREE.Group();
+  213 |   road.position.y = rowIndex * tileSize;
+  214 | 
+  215 |   const section = (color) =>
+  216 |     new THREE.Mesh(
+  217 |       new THREE.PlaneGeometry(tilesPerRow * tileSize, tileSize),
+  218 |       new THREE.MeshLambertMaterial({ color })
+  219 |     );
+  220 | 
+  221 |   const middle = section(0x454a59);
+  222 |   middle.receiveShadow = true;
+  223 |   road.add(middle);
+  224 | 
+  225 |   const left = section(0x393d49);
+  226 |   left.position.x = -tilesPerRow * tileSize;
+  227 |   road.add(left);
+  228 | 
+  229 |   const right = section(0x393d49);
+  230 |   right.position.x = tilesPerRow * tileSize;
+  231 |   road.add(right);
+  232 | 
+  233 |   return road;
+  234 | }
+  235 | 
+  236 | function Tree(tileIndex, height) {
+  237 |   const tree = new THREE.Group();
+  238 |   tree.position.x = tileIndex * tileSize;
+  239 | 
+  240 |   const trunk = new THREE.Mesh(
+  241 |     new THREE.BoxGeometry(15, 15, 20),
+  242 |     new THREE.MeshLambertMaterial({ color: 0x4d2926, flatShading: true })
+  243 |   );
+  244 |   trunk.position.z = 10;
+  245 |   tree.add(trunk);
+  246 | 
+  247 |   const crown = new THREE.Mesh(
+  248 |     new THREE.BoxGeometry(30, 30, height),
+  249 |     new THREE.MeshLambertMaterial({ color: 0x7aa21d, flatShading: true })
+  250 |   );
+  251 |   crown.position.z = height / 2 + 20;
+  252 |   crown.castShadow = true;
+  253 |   crown.receiveShadow = true;
+  254 |   tree.add(crown);
+  255 | 
+  256 |   return tree;
+  257 | }
+  258 | 
+  259 | // Map and metadata (fixed layout)
+  260 | const metadata = [];
+  261 | const map = new THREE.Group();
+  262 | scene.add(map);
+  263 | 
+  264 | // Define a fixed set of rows for a deterministic level
+  265 | const FIXED_ROWS = [
+  266 |   // Row 1..N (positive Y). Exactly 3 'car' rows; no trucks.
+  267 |   { type: 'forest', trees: [ { tileIndex: -5, height: 45 }, { tileIndex: 0, height: 60 }, { tileIndex: 4, height: 20 } ] },
+  268 |   { type: 'car', direction: true, speed: 140, vehicles: [ { initialTileIndex: -7, color: 0xa52523 }, { initialTileIndex: -1, color: 0x78b14b }, { initialTileIndex: 6, color: 0xbdb638 } ] },
+  269 |   { type: 'forest', trees: [ { tileIndex: -6, height: 20 }, { tileIndex: 2, height: 60 }, { tileIndex: 7, height: 45 } ] },
+  270 |   { type: 'forest', trees: [ { tileIndex: -3, height: 45 }, { tileIndex: 1, height: 20 }, { tileIndex: 5, height: 60 } ] },
+  271 |   { type: 'car', direction: false, speed: 188, vehicles: [ { initialTileIndex: -8, color: 0xbdb638 }, { initialTileIndex: -2, color: 0x78b14b }, { initialTileIndex: 5, color: 0xa52523 } ] },
+  272 |   { type: 'forest', trees: [ { tileIndex: -7, height: 20 }, { tileIndex: -1, height: 45 }, { tileIndex: 6, height: 60 } ] },
+  273 |   { type: 'forest', trees: [ { tileIndex: -4, height: 60 }, { tileIndex: 0, height: 20 }, { tileIndex: 4, height: 45 } ] },
+  274 |   { type: 'car', direction: true, speed: 156, vehicles: [ { initialTileIndex: -5, color: 0xa52523 }, { initialTileIndex: 0, color: 0xbdb638 }, { initialTileIndex: 7, color: 0x78b14b } ] },
+  275 |   { type: 'forest', trees: [ { tileIndex: -8, height: 45 }, { tileIndex: -2, height: 20 }, { tileIndex: 3, height: 60 } ] },
+  276 |   { type: 'forest', trees: [ { tileIndex: -6, height: 20 }, { tileIndex: -1, height: 60 }, { tileIndex: 6, height: 45 } ] },
+  277 |   { type: 'forest', trees: [ { tileIndex: -5, height: 45 }, { tileIndex: 2, height: 20 }, { tileIndex: 5, height: 60 } ] },
+  278 | ];
+  279 | const END_ROW_COUNT = FIXED_ROWS.length;
+  280 | const END_Y = END_ROW_COUNT * tileSize;
+  281 | 
+  282 | function buildFixedRows() {
+  283 |   const startIndex = metadata.length;
+  284 |   metadata.push(...FIXED_ROWS);
+  285 | 
+  286 |   FIXED_ROWS.forEach((rowData, index) => {
+  287 |     const rowIndex = startIndex + index + 1;
+  288 | 
+  289 |     if (rowData.type === 'forest') {
+  290 |       const row = Grass(rowIndex);
+  291 |       rowData.trees.forEach(({ tileIndex, height }) => {
+  292 |         row.add(Tree(tileIndex, height));
+  293 |       });
+  294 |       map.add(row);
+  295 |     }
+  296 | 
+  297 |     if (rowData.type === 'car') {
+  298 |       const row = Road(rowIndex);
+  299 |       rowData.vehicles.forEach((vehicle) => {
+  300 |         const car = Car(vehicle.initialTileIndex, rowData.direction, vehicle.color);
+  301 |         vehicle.ref = car;
+  302 |         row.add(car);
+  303 |       });
+  304 |       map.add(row);
+  305 |     }
+  306 | 
+  307 |     if (rowData.type === 'truck') {
+  308 |       const row = Road(rowIndex);
+  309 |       rowData.vehicles.forEach((vehicle) => {
+  310 |         const truck = Truck(vehicle.initialTileIndex, rowData.direction, vehicle.color);
+  311 |         vehicle.ref = truck;
+  312 |         row.add(truck);
+  313 |       });
+  314 |       map.add(row);
+  315 |     }
+  316 |   });
+  317 | }
+  318 | 
+  319 | // Initialize base grass rows and then dynamic rows
+  320 | // Add base grass below the starting row
+  321 | for (let rowIndex = 0; rowIndex > -10; rowIndex--) {
+  322 |   map.add(Grass(rowIndex));
+  323 | }
+  324 | // Add forward rows with content (fixed level)
+  325 | buildFixedRows();
+  326 | 
+  327 | 
+  328 | // --------------------------------------------------
+  329 | // Character setup (with CharacterControls)
+  330 | // --------------------------------------------------
+  331 | let characterControls;
+  332 | const keysPressed = {};
+  333 | const loader = new GLTFLoader();
+  334 | 
+  335 | loader.load(
+  336 |   "/models/Soldier.glb",
+  337 |   (gltf) => {
+  338 |     const model = gltf.scene;
+  339 |     model.scale.set(10, 10, 10);
+  340 |     model.position.set(0, 0, 10);
+  341 |     scene.add(model);
+  342 | 
+  343 |     const mixer = new THREE.AnimationMixer(model);
+  344 |     const animationsMap = new Map();
+  345 |     gltf.animations.forEach((clip) => {
+  346 |       animationsMap.set(clip.name, mixer.clipAction(clip));
+  347 |     });
+  348 | 
+  349 |     // Soldier/glTF is typically Y-up; but this Crossy scene uses Z-up math. Rotate model and use Z-up controls.
+  350 |     model.rotation.x = Math.PI / 2; // make front face upright relative to Z-up world
+  351 |     // If forward is reversed, add Math.PI (180deg) forward offset.
+  352 |     characterControls = new CharacterControls(model, mixer, animationsMap, controls, camera, 'Idle', 'Z', Math.PI);
+  353 |   },
+  354 |   undefined,
+  355 |   (error) => console.error("Error loading soldier model:", error)
+  356 | );
+  357 | 
+  358 | // --------------------------------------------------
+  359 | // Input handling (WASD keys)
+  360 | // --------------------------------------------------
+  361 | document.addEventListener("keydown", (event) => {
+  362 |   keysPressed[event.key.toLowerCase()] = true;
+  363 | });
+  364 | document.addEventListener("keyup", (event) => {
+  365 |   keysPressed[event.key.toLowerCase()] = false;
+  366 | });
+  367 | 
+  368 | // --------------------------------------------------
+  369 | // Animation loop
+  370 | // --------------------------------------------------
+  371 | 
+  372 | const clock = new THREE.Clock();
+  373 | 
+  374 | renderer.setAnimationLoop(() => {
+  375 |   const delta = clock.getDelta();
+  376 | 
+  377 |   if (characterControls) {
+  378 |     characterControls.update(delta, keysPressed);
+  379 | 
+  380 |     // Manual third-person camera follow (Z-up): behind the character, fixed height
+  381 |     const CAMERA_BACK = 120;
+  382 |     const CAMERA_HEIGHT = 90;
+  383 |     const lookHeight = 40;
+  384 | 
+  385 |     // Compute character forward in world (Z-up)
+  386 |     const forward = new THREE.Vector3(0, 1, 0).applyQuaternion(characterControls.model.quaternion);
+  387 |     forward.z = 0; // project to ground
+  388 |     if (forward.lengthSq() > 0) forward.normalize(); else forward.set(0,1,0);
+  389 | 
+  390 |     const desiredCamPos = new THREE.Vector3()
+  391 |       .copy(characterControls.model.position)
+  392 |       .addScaledVector(forward, -CAMERA_BACK)
+  393 |       .add(new THREE.Vector3(0, 0, CAMERA_HEIGHT));
+  394 | 
+  395 |     camera.position.lerp(desiredCamPos, 0.2);
+  396 |     const lookTarget = new THREE.Vector3()
+  397 |       .copy(characterControls.model.position)
+  398 |       .add(new THREE.Vector3(0, 0, lookHeight));
+  399 |     camera.lookAt(lookTarget);
+  400 |   }
+  401 | 
+  402 |   // Animate vehicles
+  403 |   const beginningOfRow = (minTileIndex - 2) * tileSize;
+  404 |   const endOfRow = (maxTileIndex + 2) * tileSize;
+  405 |   metadata.forEach((rowData) => {
+  406 |     if (rowData.type === 'car' || rowData.type === 'truck') {
+  407 |       rowData.vehicles.forEach(({ ref }) => {
+  408 |         if (!ref) return;
+  409 |         if (rowData.direction) {
+  410 |           ref.position.x = ref.position.x > endOfRow ? beginningOfRow : ref.position.x + rowData.speed * delta;
+  411 |         } else {
+  412 |           ref.position.x = ref.position.x < beginningOfRow ? endOfRow : ref.position.x - rowData.speed * delta;
+  413 |         }
+  414 |       });
+  415 |     }
+  416 |   });
+  417 | 
+  418 |   // Detect end-of-level: when character reaches beyond last row
+  419 |   if (characterControls) {
+  420 |     const playerY = characterControls.model.position.y;
+  421 |     if (playerY >= END_Y + tileSize * 0.5) {
+  422 |       window.location.href = 'http://localhost:5173/';
+  423 |       return;
+  424 |     }
+  425 |   }
+  426 | 
+  427 |   renderer.render(scene, camera);
+  428 | });
+  429 | 
+  430 | // --------------------------------------------------
+  431 | // Responsive resize
+  432 | // --------------------------------------------------
+  433 | window.addEventListener("resize", () => {
+  434 |   renderer.setSize(window.innerWidth, window.innerHeight);
+  435 |   camera.updateProjectionMatrix();
+  436 | });
+  437 | 
+===== END FILE: src/crossRoad.js =====
+
+===== FILE: src/main.js =====
+    1 | import * as THREE from 'three';
+    2 | import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+    3 | import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+    4 | import { CharacterControls } from './characterControls.js';
+    5 | 
+    6 | // === Scene Setup ===
+    7 | const scene = new THREE.Scene();
+    8 | 
+    9 | // Load sky texture as background
+   10 | const textureLoader = new THREE.TextureLoader();
+   11 | textureLoader.load('/models/sky.jpeg', (texture) => {
+   12 |     texture.encoding = THREE.sRGBEncoding; 
+   13 |     scene.background = texture;
+   14 | });
+   15 | 
+   16 | // Camera
+   17 | const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+   18 | camera.position.set(0, 2, 5);
+   19 | 
+   20 | // Renderer
+   21 | const renderer = new THREE.WebGLRenderer({ antialias: true });
+   22 | renderer.setSize(window.innerWidth, window.innerHeight);
+   23 | document.body.appendChild(renderer.domElement);
+   24 | 
+   25 | // Clock and key handling
+   26 | const clock = new THREE.Clock();
+   27 | const keysPressed = {};
+   28 | document.addEventListener("keydown", e => keysPressed[e.key.toLowerCase()] = true);
+   29 | document.addEventListener("keyup", e => keysPressed[e.key.toLowerCase()] = false);
+   30 | 
+   31 | // OrbitControls (debug)
+   32 | const orbitControls = new OrbitControls(camera, renderer.domElement);
+   33 | orbitControls.enableDamping = true;
+   34 | 
+   35 | // Lights
+   36 | const light = new THREE.DirectionalLight(0xffffff, 1);
+   37 | light.position.set(10, 10, 10);
+   38 | scene.add(light);
+   39 | scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+   40 | 
+   41 | // === Load Environment ===
+   42 | const loader = new GLTFLoader();
+   43 | let environment, obstacles = [], teleportTarget;
+   44 | 
+   45 | loader.load("/models/Gamestates.glb", (gltf) => {
+   46 |     environment = gltf.scene;
+   47 |     scene.add(environment);
+   48 | 
+   49 |     environment.traverse((child) => {
+   50 |         if (child.isMesh) {
+   51 |             child.geometry.computeBoundingBox();
+   52 | 
+   53 |             // Obstacles
+   54 |             if (child.name.startsWith("Cube") || child.name.startsWith("Cylinder")) {
+   55 |                 const bbox = new THREE.Box3().setFromObject(child);
+   56 |                 obstacles.push(bbox);
+   57 | 
+   58 |                 const helper = new THREE.Box3Helper(bbox, 0xff0000);
+   59 |                 scene.add(helper);
+   60 |             }
+   61 | 
+   62 |             // Teleport target (Plane001)
+   63 |             if (child.name === "Plane001") {
+   64 |                 teleportTarget = new THREE.Box3().setFromObject(child);
+   65 |                 const helper = new THREE.Box3Helper(teleportTarget, 0x00ff00);
+   66 |                 scene.add(helper);
+   67 |             }
+   68 |         }
+   69 |     });
+   70 | });
+   71 | 
+   72 | // === Load Soldier ===
+   73 | let characterControls;
+   74 | loader.load("/models/Soldier.glb", (gltf) => {
+   75 |     const model = gltf.scene;
+   76 |     model.scale.set(1, 1, 1);
+   77 |     model.position.set(0, 0.1, 3);
+   78 |     scene.add(model);
+   79 | 
+   80 |     const mixer = new THREE.AnimationMixer(model);
+   81 |     const animationsMap = new Map();
+   82 |     gltf.animations.forEach(clip => animationsMap.set(clip.name, mixer.clipAction(clip)));
+   83 | 
+   84 |     characterControls = new CharacterControls(model, mixer, animationsMap, orbitControls, camera, "Idle");
+   85 | });
+   86 | 
+   87 | // === Collision Check ===
+   88 | function checkCollisions(character) {
+   89 |     if (!obstacles.length) return false;
+   90 | 
+   91 |     const charBox = new THREE.Box3().setFromObject(character);
+   92 | 
+   93 |     // Obstacle collisions
+   94 |     for (let obstacle of obstacles) {
+   95 |         if (charBox.intersectsBox(obstacle)) return true;
+   96 |     }
+   97 | 
+   98 |     // Teleport collision
+   99 |     if (teleportTarget && charBox.intersectsBox(teleportTarget)) {
+  100 |         teleportToMiniChallenge();
+  101 |     }
+  102 | 
+  103 |     return false;
+  104 | }
+  105 | 
+  106 | // === Teleport Function ===
+  107 | function teleportToMiniChallenge() {
+  108 |     window.location.href = "http://localhost:5173/crossRoad.html";
+  109 | }
+  110 | 
+  111 | // === Animate Loop ===
+  112 | function animate() {
+  113 |     requestAnimationFrame(animate);
+  114 | 
+  115 |     const delta = clock.getDelta();
+  116 | 
+  117 |     if (characterControls) {
+  118 |         const oldPos = characterControls.model.position.clone();
+  119 |         characterControls.update(delta, keysPressed);
+  120 | 
+  121 |         if (checkCollisions(characterControls.model)) {
+  122 |             characterControls.model.position.copy(oldPos);
+  123 |         }
+  124 |     }
+  125 | 
+  126 |     orbitControls.update();
+  127 |     renderer.render(scene, camera);
+  128 | }
+  129 | animate();
+  130 | 
+  131 | // === Window Resize ===
+  132 | window.addEventListener("resize", () => {
+  133 |     camera.aspect = window.innerWidth / window.innerHeight;
+  134 |     camera.updateProjectionMatrix();
+  135 |     renderer.setSize(window.innerWidth, window.innerHeight);
+  136 | });
+  137 | 
+===== END FILE: src/main.js =====
+
+===== FILE: src/utils.js =====
+    1 | // Key constants for character controls
+    2 | export const W = 'w';
+    3 | export const A = 'a';
+    4 | export const S = 's';
+    5 | export const D = 'd';
+    6 | 
+    7 | // Array of all movement directions
+    8 | export const DIRECTIONS = [W, A, S, D];
+    9 | 
+===== END FILE: src/utils.js =====
