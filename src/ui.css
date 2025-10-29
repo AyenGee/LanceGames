@@ -200,3 +200,34 @@
   font-size: 16px;
   cursor: pointer;
 }
+
+/* style.css or <style> in index.html */
+#minimap {
+    position: absolute;
+    top: 20px;
+    left: 20px; /* Position top-left */
+    width: 200px; /* Map size in pixels */
+    height: 200px;
+    background-image: url('/path/to/your/level-layout.png'); /* <<< CHANGE THIS PATH */
+    background-size: cover;
+    border: 2px solid #555;
+    border-radius: 4px;
+    overflow: hidden; /* Clip icons outside map */
+    z-index: 1000; /* Ensure it's above the canvas */
+    pointer-events: none; /* Make it non-interactive */
+}
+
+#player-icon {
+    position: absolute;
+    /* Triangle pointing up */
+    width: 0;
+    height: 0;
+    background-color: transparent;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 12px solid #00ff00; /* Green triangle */
+    
+    /* We set top/left/transform via JS */
+}
+
+/* Add styles for #enemy-icon if needed */

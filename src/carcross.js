@@ -460,86 +460,154 @@ document.addEventListener('keyup', (e) => {
 
 // ------------------- Animate -------------------
 const clock = new THREE.Clock();
+// --- Constants for Minimap ---
+const mapWidthPx = 200;
+const mapHeightPx = 200;
+const mapMargin = 20;
+const aspect = mapWidthPx / mapHeightPx;
+const mapViewSize = 30; // ADJUST THIS FOR ZOOM LEVEL (smaller = more zoomed in)
 
+const mapTop = mapViewSize / 2;
+const mapBottomParam = -mapViewSize / 2; // Renamed to avoid conflict
+const mapLeftParam = -mapViewSize * aspect / 2; // Renamed to avoid conflict
+const mapRightParam = mapViewSize * aspect / 2; // Renamed to avoid conflict
+const near = 0.1;
+const far = 1000;
+
+const mapCamera = new THREE.OrthographicCamera(mapLeftParam, mapRightParam, mapTop, mapBottomParam, near, far);
 renderer.setAnimationLoop(() => {
-  const dt = clock.getDelta();
+    const dt = clock.getDelta();
 
-  // Update character
-  if (characterControls && !gameEnded && !gamePaused) characterControls.update(dt, keysPressed);
-  else controls.update();
-
-  // Intro camera animation (lerp from current to behind-the-character view)
-  if (introCamAnimating) {
-    introCamT += dt / introCamDuration;
-    const t = Math.min(1, introCamT);
-    camera.position.lerpVectors(introStartEye, introEndEye, t);
-    controls.target.lerpVectors(introStartTarget, introEndTarget, t);
-    if (t >= 1) introCamAnimating = false;
-  }
-
-  // Clamp player within environment bounds
-  if (playerModel && worldBounds) {
-    const pad = 0.5; // small padding so we don't intersect edges
-    const px = THREE.MathUtils.clamp(playerModel.position.x, worldBounds.minX + pad, worldBounds.maxX - pad);
-    const pz = THREE.MathUtils.clamp(playerModel.position.z, worldBounds.minZ + pad, worldBounds.maxZ - pad);
-    playerModel.position.x = px;
-    playerModel.position.z = pz;
-  }
-
-  // Clamp camera/viewport horizontally within environment bounds
-  if (worldBounds) {
-    const padCam = 0.5;
-    const minX = worldBounds.minX + padCam;
-    const maxX = worldBounds.maxX - padCam;
-    controls.target.x = THREE.MathUtils.clamp(controls.target.x, minX, maxX);
-    camera.position.x = THREE.MathUtils.clamp(camera.position.x, minX, maxX);
-  }
-
-  // Move vehicles (halt when paused or ended)
-  if (!gameEnded && !gamePaused) {
-    lanes.forEach((lane) => {
-      lane.vehicles.forEach((v) => {
-        v.mesh.position.z += v.speed * dt * v.dir;
-        if (v.dir > 0 && v.mesh.position.z > lane.maxZ) v.mesh.position.z = lane.minZ;
-        if (v.dir < 0 && v.mesh.position.z < lane.minZ) v.mesh.position.z = lane.maxZ;
-      });
-    });
-  }
-
-  // Simple collision detection
-  if (playerModel) {
-    const playerBox = new THREE.Box3().setFromObject(playerModel);
-    let hit = false;
-    for (const lane of lanes) {
-      for (const v of lane.vehicles) {
-        const box = new THREE.Box3().setFromObject(v.mesh);
-        if (playerBox.intersectsBox(box)) {
-          hit = true;
-          break;
+    // --- 1. Update Character, Controls, Camera Intro ---
+    if (characterControls && !gameEnded && !gamePaused) {
+        characterControls.update(dt, keysPressed);
+        // --- Update Map Camera to follow player ---
+        if (playerModel) { // Ensure playerModel exists
+             mapCamera.position.set(
+                 playerModel.position.x,
+                 50, // Height above the player for the map view
+                 playerModel.position.z
+             );
+             mapCamera.lookAt(
+                 playerModel.position.x,
+                 0,  // Look down at the player's ground position
+                 playerModel.position.z
+             );
+             // mapCamera.updateProjectionMatrix(); // Usually not needed if only position changes
         }
-      }
-      if (hit) {
-        // Reset player position if hit
-        if (playerStart) playerModel.position.copy(playerStart);
-        else playerModel.position.set(0, 0, 0);
-        focusCameraOnPlayer();
-        break;
-      }
-    }
-  }
+        // --- End Map Camera Update ---
 
-  // Update and persist timer
-  if (!gameEnded && !gamePaused) {
-    timeMsLeft -= dt * 1000;
-    if (timeMsLeft <= 0) {
-      timeMsLeft = 0;
-      gameEnded = true;
+    } else if (!introCamAnimating) { // Only update orbit controls if not paused AND intro anim is done
+         controls.update();
     }
-    updateHud();
-    localStorage.setItem('gameState', JSON.stringify({ reportsCollected, totalReports, timeMsLeft }));
-  }
 
-  renderer.render(scene, camera);
+
+    if (introCamAnimating) {
+        introCamT += dt / introCamDuration;
+        const t = Math.min(1, introCamT);
+        camera.position.lerpVectors(introStartEye, introEndEye, t);
+        controls.target.lerpVectors(introStartTarget, introEndTarget, t);
+        if (t >= 1) introCamAnimating = false;
+    }
+
+    // --- (Clamp player, camera, move vehicles, check collisions logic remains the same) ---
+     // Clamp player within environment bounds
+     if (playerModel && worldBounds) {
+         const pad = 0.5;
+         const px = THREE.MathUtils.clamp(playerModel.position.x, worldBounds.minX + pad, worldBounds.maxX - pad);
+         const pz = THREE.MathUtils.clamp(playerModel.position.z, worldBounds.minZ + pad, worldBounds.maxZ - pad);
+         playerModel.position.x = px;
+         playerModel.position.z = pz;
+     }
+
+     // Clamp camera/viewport horizontally within environment bounds
+     if (worldBounds && !introCamAnimating) { // Don't clamp during intro anim
+         const padCam = 0.5;
+         const minX = worldBounds.minX + padCam;
+         const maxX = worldBounds.maxX - padCam;
+         controls.target.x = THREE.MathUtils.clamp(controls.target.x, minX, maxX);
+         camera.position.x = THREE.MathUtils.clamp(camera.position.x, minX, maxX);
+     }
+
+
+     // Move vehicles (halt when paused or ended)
+     if (!gameEnded && !gamePaused) {
+         lanes.forEach((lane) => {
+             lane.vehicles.forEach((v) => {
+                 v.mesh.position.z += v.speed * dt * v.dir;
+                 if (v.dir > 0 && v.mesh.position.z > lane.maxZ) v.mesh.position.z = lane.minZ;
+                 if (v.dir < 0 && v.mesh.position.z < lane.minZ) v.mesh.position.z = lane.maxZ;
+             });
+         });
+     }
+
+     // Simple collision detection
+     if (playerModel && !gameEnded && !gamePaused) { // Only check collision if playing
+         const playerBox = new THREE.Box3().setFromObject(playerModel);
+         let hit = false;
+         for (const lane of lanes) {
+             for (const v of lane.vehicles) {
+                 const box = new THREE.Box3().setFromObject(v.mesh);
+                 if (playerBox.intersectsBox(box)) {
+                     hit = true;
+                     break;
+                 }
+             }
+             if (hit) {
+                 if (playerStart) playerModel.position.copy(playerStart);
+                 else playerModel.position.set(0, 0, 0); // Fallback reset
+                 // focusCameraOnPlayer(); // Snap camera back instantly - might be jarring? Or let orbit controls catch up?
+                 // Optionally: Reset map camera lookAt too if needed after player reset
+                 if(playerModel){
+                     mapCamera.position.set(playerModel.position.x, 50, playerModel.position.z);
+                     mapCamera.lookAt(playerModel.position.x, 0, playerModel.position.z);
+                 }
+                 break;
+             }
+         }
+     }
+    // ...
+
+    // --- Update Timer & HUD ---
+    if (!gameEnded && !gamePaused) { // Update timer only if playing
+        timeMsLeft -= dt * 1000;
+        if (timeMsLeft <= 0) {
+            timeMsLeft = 0;
+            gameEnded = true;
+            // showTimesUp(); // You might want a different end screen for this scene
+        }
+        updateHud(); // Update HUD regardless of timer state if not paused? Or move inside if?
+        // Persist less often? Maybe only on pause or level end?
+        // localStorage.setItem('gameState', JSON.stringify({ reportsCollected, totalReports, timeMsLeft }));
+    }
+
+    // --- RENDER START ---
+
+    // --- 3. Render Main Scene (Full Screen) ---
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+    renderer.clear(true, true); // Clear color and depth
+    renderer.render(scene, camera);
+
+    // --- 4. Render Minimap (Bottom-Right Corner) ---
+    renderer.setScissorTest(true);
+
+    // Calculate bottom-right corner position
+    const mapVPLeft = window.innerWidth - mapWidthPx - mapMargin; // Viewport Left
+    const mapVPBottom = mapMargin;                                // Viewport Bottom
+
+    // Set scissor and viewport rectangles
+    renderer.setScissor(mapVPLeft, mapVPBottom, mapWidthPx, mapHeightPx);
+    renderer.setViewport(mapVPLeft, mapVPBottom, mapWidthPx, mapHeightPx);
+
+    renderer.clearDepth(); // Clear only depth in the map area
+
+    // Render the scene again using the map camera
+    renderer.render(scene, mapCamera);
+
+    renderer.setScissorTest(false); // IMPORTANT: Disable scissor for next frame
+
+    // --- RENDER END ---
 });
 
 // ------------------- Resize -------------------
