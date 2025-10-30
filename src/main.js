@@ -186,6 +186,30 @@ renderer.autoClear = false; // <-- Set autoClear to false HERE
 document.body.appendChild(renderer.domElement);
 // REMOVED mapRenderer - Use only one renderer
 
+// === First-Person Controls (from west.js) ===
+let mouseSensitivity = 0.002;
+let yaw = 0;
+let pitch = 0;
+let isFirstPerson = false;
+const CAMERA_TOGGLE_KEY = 'v';
+const moveSpeed = 5.0;
+
+// Request pointer lock only in first-person mode
+document.body.addEventListener('click', () => {
+	if (!renderer) return;
+	if (isFirstPerson && document.pointerLockElement !== renderer.domElement) {
+		try { renderer.domElement.requestPointerLock(); } catch (e) { console.warn('Pointer lock request failed:', e); }
+	}
+});
+
+// Sync OrbitControls enabled state with pointer lock and mode
+document.addEventListener('pointerlockchange', () => {
+	if (!renderer) return;
+	const locked = document.pointerLockElement === renderer.domElement;
+	// In first-person, OrbitControls should always be disabled
+	orbitControls.enabled = !isFirstPerson && !locked;
+});
+
 // Clock and key handling
 const clock = new THREE.Clock();
 const keysPressed = {};
@@ -195,6 +219,81 @@ document.addEventListener("keyup", e => keysPressed[e.key.toLowerCase()] = false
 // OrbitControls (debug)
 const orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.enableDamping = true;
+
+// === Mouse look (FPS only) ===
+document.addEventListener('mousemove', (e) => {
+	if (isFirstPerson && document.pointerLockElement === renderer.domElement) {
+		yaw -= e.movementX * mouseSensitivity;
+		pitch -= e.movementY * mouseSensitivity;
+		pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitch));
+	}
+});
+
+// === FPS movement update ===
+function updateFirstPersonCamera(delta) {
+	if (!isFirstPerson) return;
+	const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+	const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
+	const finalQuat = new THREE.Quaternion();
+	finalQuat.multiplyQuaternions(qYaw, qPitch);
+	camera.quaternion.copy(finalQuat);
+
+	const moveVector = new THREE.Vector3();
+	if (keysPressed['w']) moveVector.z -= 1;
+	if (keysPressed['s']) moveVector.z += 1;
+	if (keysPressed['a']) moveVector.x -= 1;
+	if (keysPressed['d']) moveVector.x += 1;
+	if (moveVector.length() > 0) {
+		moveVector.normalize();
+		const moveQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+		moveVector.applyQuaternion(moveQuat);
+		moveVector.multiplyScalar(moveSpeed * delta);
+		camera.position.add(moveVector);
+	}
+}
+
+// === Toggle camera mode ===
+function toggleCameraMode() {
+	isFirstPerson = !isFirstPerson;
+	if (isFirstPerson) {
+		if (characterControls && characterControls.model) {
+			const charPos = new THREE.Vector3();
+			characterControls.model.getWorldPosition(charPos);
+			camera.position.copy(charPos);
+			camera.position.y = charPos.y + 1.5;
+			yaw = characterControls.model.rotation.y;
+			pitch = 0;
+			characterControls.model.visible = false;
+		}
+		else {
+			// Fallback if character not available: initialize yaw from current camera heading
+			const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+			yaw = euler.y; pitch = 0;
+		}
+		orbitControls.enabled = false;
+		try { renderer.domElement.requestPointerLock(); } catch {}
+		console.log('Switched to first-person view (free camera)');
+	} else {
+		if (characterControls && characterControls.model) {
+			characterControls.model.position.copy(camera.position);
+			characterControls.model.position.y = 0.1;
+			characterControls.model.rotation.y = yaw;
+			characterControls.model.visible = true;
+			const offset = new THREE.Vector3(0, 2, 5);
+			offset.applyQuaternion(characterControls.model.quaternion);
+			camera.position.copy(characterControls.model.position.clone().add(offset));
+			camera.lookAt(characterControls.model.position);
+		}
+		if (document.pointerLockElement === renderer.domElement) {
+			try { document.exitPointerLock(); } catch {}
+		}
+		orbitControls.enabled = true;
+		if (characterControls && characterControls.model) {
+			orbitControls.target.copy(characterControls.model.position);
+		}
+		console.log('Switched to third-person view');
+	}
+}
 
 // Lights
 const light = new THREE.DirectionalLight(0xffffff, 1);
@@ -447,40 +546,44 @@ function animate() {
 
     const delta = clock.getDelta();
 
-    // --- 1. Update Game Logic & Player ---
-    if (characterControls && gameStarted && !gameEnded && !gamePaused) {
-        const oldPos = characterControls.model.position.clone();
-        characterControls.update(delta, keysPressed);
+	// --- 1. Update Game Logic & Player ---
+	if (isFirstPerson) {
+		if (gameStarted && !gameEnded && !gamePaused) {
+			updateFirstPersonCamera(delta);
+		}
+	} else if (characterControls && gameStarted && !gameEnded && !gamePaused) {
+		const oldPos = characterControls.model.position.clone();
+		characterControls.update(delta, keysPressed);
 
-        // --- 1a. Update Map Camera Position ---
-        mapCamera.position.set(
-            characterControls.model.position.x,
-            100, // Keep height constant
-            characterControls.model.position.z
-        );
-        mapCamera.lookAt(
-            characterControls.model.position.x,
-            0,   // Look at ground level
-            characterControls.model.position.z
-        );
-        // mapCamera.updateProjectionMatrix(); // Only needed if Left/Right/Top/Bottom/Near/Far change
+		// --- 1a. Update Map Camera Position ---
+		mapCamera.position.set(
+			characterControls.model.position.x,
+			100, // Keep height constant
+			characterControls.model.position.z
+		);
+		mapCamera.lookAt(
+			characterControls.model.position.x,
+			0,   // Look at ground level
+			characterControls.model.position.z
+		);
+		// mapCamera.updateProjectionMatrix(); // Only needed if Left/Right/Top/Bottom/Near/Far change
 
-        // --- 1b. Collision Check & Revert ---
-        if (checkCollisions(characterControls.model)) {
-            characterControls.model.position.copy(oldPos);
-            // Re-update map camera if position reverted
-            mapCamera.position.set(
-                characterControls.model.position.x,
-                100,
-                characterControls.model.position.z
-            );
-            mapCamera.lookAt(
-                characterControls.model.position.x,
-                0,
-                characterControls.model.position.z
-            );
-        }
-    }
+		// --- 1b. Collision Check & Revert ---
+		if (checkCollisions(characterControls.model)) {
+			characterControls.model.position.copy(oldPos);
+			// Re-update map camera if position reverted
+			mapCamera.position.set(
+				characterControls.model.position.x,
+				100,
+				characterControls.model.position.z
+			);
+			mapCamera.lookAt(
+				characterControls.model.position.x,
+				0,
+				characterControls.model.position.z
+			);
+		}
+	}
 
     // --- 2. Update Timer & HUD ---
     if (gameStarted && !gameEnded && !gamePaused) {
@@ -494,7 +597,7 @@ function animate() {
         updateHUD();
     }
 
-    orbitControls.update(); // Update orbit controls if used
+    if (!isFirstPerson) orbitControls.update(); // Disable orbit update in FPS
 
     // --- 3. Render Main Scene (Full Screen) ---
     renderer.setScissorTest(false);
@@ -529,6 +632,11 @@ window.addEventListener("resize", () => {
     // but viewport *position* might if you anchor differently.
     // For top-left corner, only renderer size needs update.
     renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// === Camera toggle key ===
+document.addEventListener("keydown", (e) => {
+	if (e.key.toLowerCase() === CAMERA_TOGGLE_KEY) toggleCameraMode();
 });
 
 // === Times Up / Restart === (Keep existing showTimesUp and restart functions)
