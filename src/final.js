@@ -3,9 +3,6 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CharacterControls } from './characterControls.js';
 
-// Disable console.log output in production
-try { if (console && typeof console.log === 'function') console.log = () => {}; } catch {}
-
 // Scene
 const scene = new THREE.Scene();
 const SCENE_SCALE = 3; // make the scene bigger
@@ -48,6 +45,88 @@ let characterControls = null;
 const obstacles = [];
 const SHOW_COLLISION_HELPERS = false; // disable red collision helpers
 let mazeMesh = null; // precise collider target
+let humanMesh = null; // target to win
+
+// === Shared Timer (Persistent Across Pages) ===
+const TIMER_KEY = 'gameTimer';
+function readPersistedTimer() {
+  try {
+    const raw = localStorage.getItem(TIMER_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj.timeMsLeft !== 'number') return null;
+    const last = typeof obj.lastUpdate === 'number' ? obj.lastUpdate : Date.now();
+    const running = !!obj.running;
+    let left = obj.timeMsLeft;
+    if (running) {
+      const delta = Date.now() - last;
+      left = Math.max(0, left - delta);
+    }
+    return { timeMsLeft: left };
+  } catch { return null; }
+}
+function persistTimerState(timeMsLeft, running) {
+  try { localStorage.setItem(TIMER_KEY, JSON.stringify({ timeMsLeft, lastUpdate: Date.now(), running: !!running })); } catch {}
+}
+let timeMsTotal = 180000;
+let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
+let gameEnded = false;
+let persistThrottle = 0;
+
+// === HUD (match design used in west.js) ===
+function formatTime(ms) { const totalSec = Math.max(0, Math.ceil(ms / 1000)); const m = Math.floor(totalSec / 60).toString().padStart(2, '0'); const s = (totalSec % 60).toString().padStart(2, '0'); return `${m}:${s}`; }
+const hud = document.createElement('div');
+hud.className = 'hud';
+Object.assign(hud.style, {
+  position: 'fixed', top: '10px', right: '20px', zIndex: '9999', display: 'flex',
+  flexDirection: 'column', gap: '10px', padding: '14px 16px', background: 'rgba(0,0,0,0.55)',
+  color: '#fff', fontFamily: 'sans-serif', fontSize: '15px', borderRadius: '10px',
+  boxShadow: '0 8px 24px rgba(0,0,0,.35)', backdropFilter: 'blur(6px)', width: '360px', minHeight: '120px'
+});
+// Progress bar
+const progressContainer = document.createElement('div');
+progressContainer.className = 'progress-container';
+Object.assign(progressContainer.style, { width: '100%', height: '8px', background: 'rgba(255,255,255,0.15)', borderRadius: '999px', overflow: 'hidden' });
+const progressBar = document.createElement('div');
+progressBar.id = 'time-progress-bar';
+progressBar.className = 'time-progress-bar';
+Object.assign(progressBar.style, { width: '100%', height: '100%', background: '#00a86b', transition: 'width 0.2s linear' });
+progressContainer.appendChild(progressBar);
+
+// Main content row with TIME only (no reports in final)
+const mainContentRow = document.createElement('div');
+mainContentRow.className = 'main-content-row';
+Object.assign(mainContentRow.style, { display: 'flex', gap: '16px', alignItems: 'center', justifyContent: 'space-between' });
+
+const timeContainer = document.createElement('div');
+timeContainer.className = 'time-container';
+const timeLabel = document.createElement('div');
+timeLabel.className = 'time-label';
+timeLabel.textContent = 'TIME:';
+const timeValue = document.createElement('div');
+timeValue.id = 'time-value';
+timeValue.className = 'time-value';
+Object.assign(timeLabel.style, { opacity: '0.8', fontSize: '12px', letterSpacing: '0.5px' });
+Object.assign(timeValue.style, { fontWeight: '700', marginTop: '2px' });
+timeContainer.appendChild(timeLabel);
+timeContainer.appendChild(timeValue);
+mainContentRow.appendChild(timeContainer);
+
+hud.appendChild(progressContainer);
+hud.appendChild(mainContentRow);
+document.body.appendChild(hud);
+
+function updateHUD() {
+  const progressPercent = (timeMsLeft / timeMsTotal) * 100;
+  progressBar.style.width = `${Math.max(0, progressPercent)}%`;
+  progressBar.classList.remove('time-progress-bar--ok', 'time-progress-bar--mid', 'time-progress-bar--low');
+  if (progressPercent < 25) { progressBar.classList.add('time-progress-bar--low'); }
+  else if (progressPercent < 50) { progressBar.classList.add('time-progress-bar--mid'); }
+  else { progressBar.classList.add('time-progress-bar--ok'); }
+  const timeValueEl = document.getElementById('time-value');
+  if (timeValueEl) timeValueEl.textContent = formatTime(timeMsLeft);
+}
+updateHUD();
 
 // Load final scene and capture Plane
 loader.load('/models/final.glb', (gltf) => {
@@ -61,6 +140,7 @@ loader.load('/models/final.glb', (gltf) => {
       meshesInFinal.push(obj);
       if (obj.name === 'Plane') planeObject = obj;
       if (/9_by_9|maze|orthogonal/i.test(obj.name)) mazeMesh = obj;
+      if (obj.name === 'Human') humanMesh = obj;
     }
   });
   scene.add(env);
@@ -123,6 +203,20 @@ const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
+  if (!gameEnded) {
+    // Decrement and persist timer (throttled)
+    timeMsLeft -= dt * 1000;
+    if (timeMsLeft <= 0) {
+      timeMsLeft = 0;
+      gameEnded = true;
+    }
+    updateHUD();
+    persistThrottle += dt;
+    if (persistThrottle >= 1.0) {
+      persistTimerState(timeMsLeft, true);
+      persistThrottle = 0;
+    }
+  }
   if (characterControls) {
     const oldPos = characterControls.model.position.clone();
     characterControls.update(dt, keysPressed);
@@ -140,6 +234,16 @@ function animate() {
         characterControls.model.position.z = 18.40;
       }
   }
+  // Win check: touch Low_Poly_Human before time runs out
+  if (!gameEnded && playerModel && humanMesh && timeMsLeft > 0) {
+    const charBox = new THREE.Box3().setFromObject(playerModel);
+    const humanBox = new THREE.Box3().setFromObject(humanMesh);
+    if (charBox.intersectsBox(humanBox)) {
+      gameEnded = true;
+      persistTimerState(timeMsLeft, false);
+      showWinOverlay();
+    }
+  }
   // Keep camera close to character indoors
   if (playerModel) {
     const target = playerModel.position.clone().add(new THREE.Vector3(0, 1.5, 0));
@@ -156,6 +260,45 @@ function animate() {
   renderer.render(scene, camera);
 }
 animate();
+
+// Win overlay
+function showWinOverlay() {
+  const overlay = document.createElement('div');
+  overlay.style.position = 'fixed';
+  overlay.style.inset = '0';
+  overlay.style.background = 'rgba(0,0,0,0.8)';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '10001';
+
+  const card = document.createElement('div');
+  card.style.maxWidth = '720px';
+  card.style.margin = '20px';
+  card.style.background = 'linear-gradient(135deg, rgba(20,20,20,0.95), rgba(35,35,35,0.95))';
+  card.style.color = '#fff';
+  card.style.padding = '28px 32px';
+  card.style.borderRadius = '14px';
+  card.style.boxShadow = '0 20px 60px rgba(0,0,0,0.6)';
+  card.style.fontFamily = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+
+  const title = document.createElement('div');
+  title.textContent = 'You Win!';
+  title.style.fontSize = '28px';
+  title.style.fontWeight = '800';
+  title.style.marginBottom = '10px';
+
+  const body = document.createElement('div');
+  body.style.fontSize = '16px';
+  body.style.lineHeight = '1.7';
+  body.style.opacity = '0.95';
+  body.textContent = 'You reached the office in time.';
+
+  card.appendChild(title);
+  card.appendChild(body);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+}
 
 // Resize
 window.addEventListener('resize', () => {
