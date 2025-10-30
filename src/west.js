@@ -322,8 +322,7 @@ let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
 let timerPaused = false;
 function formatTime(ms) { const totalSec = Math.max(0, Math.ceil(ms / 1000)); const m = Math.floor(totalSec / 60).toString().padStart(2, '0'); const s = (totalSec % 60).toString().padStart(2, '0'); return `${m}:${s}`; }
 
-// Consistent HUD (progress bar like main.js)
-let hudEl = null; let pauseBtn = null; let playBtn = null;
+// Update only the existing progress bar from the primary HUD
 function updateHUD() {
     const progressBar = document.getElementById('time-progress-bar');
     if (progressBar) {
@@ -335,32 +334,6 @@ function updateHUD() {
         else { progressBar.classList.add('time-progress-bar--ok'); }
     }
 }
-function setupHUD() {
-    hudEl = document.createElement('div');
-    hudEl.className = 'hud';
-    const progressContainer = document.createElement('div');
-    progressContainer.className = 'progress-container';
-    const progressBar = document.createElement('div');
-    progressBar.id = 'time-progress-bar';
-    progressBar.className = 'time-progress-bar';
-    progressContainer.appendChild(progressBar);
-    const controlsRow = document.createElement('div');
-    controlsRow.className = 'controls-row';
-    playBtn = document.createElement('button');
-    playBtn.className = 'btn btn--play';
-    playBtn.textContent = '▶ PLAY';
-    playBtn.addEventListener('click', () => { timerPaused = false; persistTimerState(timeMsLeft, true); });
-    pauseBtn = document.createElement('button');
-    pauseBtn.className = 'btn btn--pause';
-    pauseBtn.textContent = '⏸ PAUSE';
-    pauseBtn.addEventListener('click', () => { timerPaused = true; persistTimerState(timeMsLeft, false); });
-    controlsRow.appendChild(playBtn); controlsRow.appendChild(pauseBtn);
-    hudEl.appendChild(progressContainer);
-    hudEl.appendChild(controlsRow);
-    document.body.appendChild(hudEl);
-    updateHUD();
-}
-setupHUD();
 // 1. Hemisphere Light (Sky + Ground ambient lighting for outdoor scenes)
 const hemisphereLight = new THREE.HemisphereLight(
     0x87CEEB, // Sky blue color from above
@@ -538,8 +511,8 @@ function showMessage(text) {
     msg.style.padding = '20px 40px';
     msg.style.borderRadius = '10px';
     msg.style.fontSize = '24px';
-    msg.style.fontFamily = 'sans-serif';
-nbsp;   msg.style.zIndex = '10000';
+    msg.style.fontFamily = 'sans-serif';
+    msg.style.zIndex = '10000';
     msg.style.pointerEvents = 'none';
     document.body.appendChild(msg);
     
