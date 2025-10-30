@@ -20,6 +20,24 @@ document.body.appendChild(renderer.domElement);
 // Camera
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 3, 6);
+// Audio listener and footstep sound
+const listener = new THREE.AudioListener();
+camera.add(listener);
+const audioLoader = new THREE.AudioLoader();
+const footstepSound = new THREE.Audio(listener);
+audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', function(buffer) {
+  footstepSound.setBuffer(buffer);
+  footstepSound.setLoop(true);
+  footstepSound.setVolume(0.5);
+});
+// Background music: Superhero Story 1 - Fredrik Ekstrom
+const backgroundMusic = new THREE.Audio(listener);
+audioLoader.load('assets/ES_Superhero Story 1 - Fredrik Ekstrom.mp3', function(buffer) {
+  backgroundMusic.setBuffer(buffer);
+  backgroundMusic.setLoop(true);
+  backgroundMusic.setVolume(0.25);
+  try { backgroundMusic.play(); } catch {}
+});
 
 // Controls
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -185,7 +203,7 @@ loader.load('/models/Soldier.glb', (gltf) => {
   const mixer = new THREE.AnimationMixer(playerModel);
   const animationsMap = new Map();
   gltf.animations.forEach((clip) => animationsMap.set(clip.name, mixer.clipAction(clip)));
-  characterControls = new CharacterControls(playerModel, mixer, animationsMap, controls, camera, 'Idle');
+  characterControls = new CharacterControls(playerModel, mixer, animationsMap, controls, camera, 'Idle', footstepSound);
 }, undefined, (err) => console.error('Failed to load Soldier.glb', err));
 
 // Input

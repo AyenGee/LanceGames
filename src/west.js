@@ -269,6 +269,16 @@ scene.add(mapCamera);
 
 // Camera (Main)
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+// Audio listener and footstep sound
+const listener = new THREE.AudioListener();
+camera.add(listener);
+const audioLoader = new THREE.AudioLoader();
+const footstepSound = new THREE.Audio(listener);
+audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', function(buffer) {
+    footstepSound.setBuffer(buffer);
+    footstepSound.setLoop(true);
+    footstepSound.setVolume(0.5);
+});
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -530,7 +540,7 @@ loader.load("/models/Soldier.glb", (gltf) => {
     const animationsMap = new Map();
     gltf.animations.forEach(clip => animationsMap.set(clip.name, mixer.clipAction(clip)));
 
-    characterControls = new CharacterControls(model, mixer, animationsMap, orbitControls, camera, "Idle");
+    characterControls = new CharacterControls(model, mixer, animationsMap, orbitControls, camera, "Idle", footstepSound);
 });
 
 
