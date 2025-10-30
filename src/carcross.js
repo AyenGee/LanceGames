@@ -2,15 +2,15 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CharacterControls } from './characterControls.js';
-import { FlakesTexture } from 'three/examples/jsm/Addons.js';
 
 /* =========================
    GAME STATE
 ========================= */
 const savedState = JSON.parse(localStorage.getItem('gameState') || '{}');
-let reportsCollected = savedState.reportsCollected ?? 0;
-let totalReports = savedState.totalReports ?? 3;
-let timeMsLeft = savedState.timeMsLeft ?? 120000;
+let reportsCollected = savedState.reportsCollected || 0;
+let totalReports = savedState.totalReports || 3;
+let timeMsLeft = savedState.timeMsLeft || 120000; // 2 minutes default
+const START_TIME_MS = timeMsLeft;                 // for progress bar calc
 
 let gameStarted = false;
 let gamePaused = false;
@@ -19,7 +19,7 @@ let allReportsAnnounced = false;
 
 let introCamAnimating = false;
 let introCamT = 0;
-const introCamDuration = 1.2;
+const introCamDuration = 1.2; // seconds
 const introStartEye = new THREE.Vector3();
 const introStartTarget = new THREE.Vector3();
 const introEndEye = new THREE.Vector3();
@@ -39,29 +39,47 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
-renderer.autoClear = false;
-renderer.domElement.classList.add('game-canvas');
+renderer.autoClear = false; // we render scene, then minimap
 document.body.appendChild(renderer.domElement);
 
 /* =========================
-   HUD (DOM)
+   HUD (structured UI)
 ========================= */
 const hud = document.createElement('div');
 hud.className = 'hud';
 
-// Progress bar (time)
+// Progress (time) bar
 const progressContainer = document.createElement('div');
 progressContainer.className = 'progress-container';
+Object.assign(progressContainer.style, {
+  width: '100%',
+  height: '8px',
+  background: 'rgba(255,255,255,0.15)',
+  borderRadius: '999px',
+  overflow: 'hidden',
+});
 const progressBar = document.createElement('div');
 progressBar.id = 'time-progress-bar';
 progressBar.className = 'time-progress-bar';
+Object.assign(progressBar.style, {
+  width: '100%',
+  height: '100%',
+  background: '#00a86b',
+  transition: 'width 0.2s linear',
+});
 progressContainer.appendChild(progressBar);
 
 // Main content row
 const mainContentRow = document.createElement('div');
 mainContentRow.className = 'main-content-row';
+Object.assign(mainContentRow.style, {
+  display: 'flex',
+  gap: '16px',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+});
 
-// Reports
+// Reports block
 const reportsContainer = document.createElement('div');
 reportsContainer.className = 'reports-container';
 const reportsLabel = document.createElement('div');
@@ -70,6 +88,8 @@ reportsLabel.textContent = 'REPORTS:';
 const reportsCounter = document.createElement('div');
 reportsCounter.id = 'reports-counter';
 reportsCounter.className = 'reports-counter';
+Object.assign(reportsLabel.style, { opacity: '0.8', fontSize: '12px', letterSpacing: '0.5px' });
+Object.assign(reportsCounter.style, { fontWeight: '700', marginTop: '2px' });
 reportsContainer.appendChild(reportsLabel);
 reportsContainer.appendChild(reportsCounter);
 mainContentRow.appendChild(reportsContainer);
@@ -83,6 +103,8 @@ timeLabel.textContent = 'TIME:';
 const timeValue = document.createElement('div');
 timeValue.id = 'time-value';
 timeValue.className = 'time-value';
+Object.assign(timeLabel.style, { opacity: '0.8', fontSize: '12px', letterSpacing: '0.5px' });
+Object.assign(timeValue.style, { fontWeight: '700', marginTop: '2px' });
 timeContainer.appendChild(timeLabel);
 timeContainer.appendChild(timeValue);
 mainContentRow.appendChild(timeContainer);
@@ -90,7 +112,13 @@ mainContentRow.appendChild(timeContainer);
 // Controls row
 const controlsRow = document.createElement('div');
 controlsRow.className = 'controls-row';
+Object.assign(controlsRow.style, {
+  display: 'flex',
+  gap: '10px',
+  flexWrap: 'wrap',
+});
 
+// Buttons
 const pauseBtn = document.createElement('button');
 pauseBtn.className = 'btn btn--pause';
 pauseBtn.textContent = '⏸ PAUSE';
@@ -102,7 +130,6 @@ playBtn.textContent = '▶ PLAY';
 const ctrlBtn = document.createElement('button');
 ctrlBtn.className = 'btn btn-ctrl';
 ctrlBtn.textContent = '⌨ CONTROLS';
-
 
 const rstBtn = document.createElement('button');
 rstBtn.className = 'btn btn-rst';
@@ -119,6 +146,13 @@ controlsPanel.id = 'controls-panel';
 controlsPanel.className = 'controls-panel is-hidden';
 controlsPanel.setAttribute('role', 'dialog');
 controlsPanel.setAttribute('aria-modal', 'false');
+Object.assign(controlsPanel.style, {
+  display: 'none',
+  border: '1px solid rgba(255,255,255,.12)',
+  background: 'rgba(0,0,0,.45)',
+  padding: '12px',
+  borderRadius: '10px',
+});
 controlsPanel.innerHTML = `
   <h3 style="margin:0 0 8px 0">Controls</h3>
   <ul style="margin:0;padding-left:16px;line-height:1.5">
@@ -128,16 +162,11 @@ controlsPanel.innerHTML = `
     <li><strong>Esc</strong> to close this panel</li>
   </ul>
 `;
-ctrlBtn.addEventListener('click', ()=>{
-  if(controlsPanel.hidden){
-    controlsPanel.hidden = false;
-  }else{
-    controlsPanel.hidden = true;
-  }
-})
+
 // Text fallback line (optional)
 const hudText = document.createElement('div');
 hudText.className = 'hud-text';
+hudText.style.opacity = '0.85';
 
 // Build HUD
 hud.appendChild(progressContainer);
@@ -147,12 +176,11 @@ hud.appendChild(controlsPanel);
 hud.appendChild(hudText);
 document.body.appendChild(hud);
 
-// HUD positioning (inline – works without external CSS)
+// HUD positioning (inline)
 Object.assign(hud.style, {
   position: 'fixed',
   top: '10px',
-  right: '10px',      // ⬅️ anchor to left
-  right: 'auto',     // ensure not anchored to right
+  right: '20px',
   zIndex: '9999',
   display: 'flex',
   flexDirection: 'column',
@@ -169,9 +197,8 @@ Object.assign(hud.style, {
   minHeight: '120px'
 });
 
-
-// Buttons styles if you rely on inline (minimal)
-document.querySelectorAll('.btn').forEach(b => {
+// Minimal inline styles for .btn
+[playBtn, pauseBtn, ctrlBtn, rstBtn].forEach(b => {
   Object.assign(b.style, {
     appearance: 'none',
     border: '1px solid rgba(255,255,255,.12)',
@@ -186,49 +213,45 @@ document.querySelectorAll('.btn').forEach(b => {
 Object.assign(playBtn.style, { background: '#00a86b', border: 'none' });
 Object.assign(pauseBtn.style, { background: '#cc3333', border: 'none' });
 
-/* =========================
-   HUD LOGIC
-========================= */
-function formatTime(ms) {
-  const totalSec = Math.max(0, Math.ceil(ms / 1000));
-  const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
-  const s = (totalSec % 60).toString().padStart(2, '0');
-  return `${m}:${s}`;
+// Controls panel toggling
+function setControlsPanel(open) {
+  const isOpen = open ?? (controlsPanel.style.display === 'none');
+  controlsPanel.style.display = isOpen ? 'block' : 'none';
+  ctrlBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 }
+ctrlBtn.addEventListener('click', () => setControlsPanel());
 
-function updateHud() {
-  // Dedicated fields
-  reportsCounter.textContent = `${reportsCollected}/${totalReports}`;
-  const pct = Math.max(0, Math.min(100, (timeMsLeft / 120000) * 100));
-  progressBar.style.width = pct + '%';
-  timeValue.textContent = formatTime(timeMsLeft);
+// Keyboard toggles for controls panel
+document.addEventListener('keydown', (e) => {
+  if (e.key === '?' || (e.shiftKey && e.key === '/')) setControlsPanel();
+  if (e.key === 'Escape') setControlsPanel(false);
+});
 
-  // Fallback combined string
-  hudText.textContent = `Reports: ${reportsCollected}/${totalReports} | Time: ${formatTime(timeMsLeft)}`;
-
-  if (!allReportsAnnounced && reportsCollected >= totalReports) {
-    allReportsAnnounced = true;
-    const tip = document.createElement('div');
-    tip.textContent = 'All reports collected! Go through the portal.';
-    tip.style.marginTop = '4px';
-    tip.style.opacity = '0.9';
-    hud.appendChild(tip);
-  }
+// Button behavior
+function setButtonsState() {
+  playBtn.disabled = !gamePaused || gameEnded;  // play is enabled only when paused and not ended
+  pauseBtn.disabled = gamePaused || !gameStarted || gameEnded;
+  rstBtn.disabled = false;
 }
-updateHud();
-
-// Expose safe helpers (call these from pickups, etc.)
-function setReports(collected, total = totalReports) {
-  reportsCollected = Math.max(0, Math.min(collected, total));
-  totalReports = total;
-  updateHud();
-}
-function incrementReports(delta = 1) {
-  setReports(reportsCollected + delta, totalReports);
-}
+playBtn.addEventListener('click', () => {
+  if (gameEnded) return;
+  gameStarted = true;
+  gamePaused = false;
+  setButtonsState();
+});
+pauseBtn.addEventListener('click', () => {
+  if (!gameStarted || gameEnded) return;
+  gamePaused = true;
+  setButtonsState();
+});
+rstBtn.addEventListener('click', () => {
+  // Save state if you want, or just hard reload
+  window.location.reload();
+});
+setButtonsState();
 
 /* =========================
-   OVERLAY (ARRIVAL)
+   ARRIVAL OVERLAY
 ========================= */
 gamePaused = true;
 (function setupArrivalOverlay() {
@@ -245,7 +268,7 @@ gamePaused = true;
     fontFamily: 'sans-serif',
     textAlign: 'center',
     padding: '24px',
-    zIndex: '10000'
+    zIndex: '10000',
   });
 
   const text = document.createElement('div');
@@ -253,13 +276,12 @@ gamePaused = true;
     maxWidth: '720px',
     lineHeight: '1.6',
     fontSize: '18px',
-    marginBottom: '16px'
+    marginBottom: '16px',
   });
   text.textContent = "Oh no, you'll have to go through the cars before you can proceed.";
 
   const btn = document.createElement('button');
   btn.textContent = 'CONTINUE';
-  btn.className = 'btn';
   Object.assign(btn.style, {
     cursor: 'pointer',
     padding: '10px 18px',
@@ -267,19 +289,18 @@ gamePaused = true;
     border: 'none',
     borderRadius: '6px',
     background: '#00a86b',
-    color: '#fff'
+    color: '#fff',
   });
-
   btn.addEventListener('click', () => {
     gamePaused = false;
     gameStarted = true;
-    playBtn.disabled = true;
-    pauseBtn.disabled = false;
+    setButtonsState();
 
-    // Prepare intro cam animation
+    // Camera intro animation setup
     introCamAnimating = true;
     introCamT = 0;
     introStartEye.copy(camera.position);
+    // controls defined below; click happens later so it's fine
     introStartTarget.copy(controls.target);
     const base = playerModel ? playerModel.position : new THREE.Vector3();
     introEndEye.set(base.x - 7, (playerModel ? playerModel.position.y : 0) + 3.5, base.z);
@@ -293,51 +314,35 @@ gamePaused = true;
 })();
 
 /* =========================
-   INPUTS & CONTROLS
+   HUD LOGIC
 ========================= */
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.06;
-controls.target.set(0, 1, 0);
+function formatTime(ms) {
+  const totalSec = Math.max(0, Math.ceil(Number(ms) / 1000));
+  const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
+  const s = (totalSec % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
 
-const keysPressed = {};
-document.addEventListener('keydown', (e) => {
-  keysPressed[e.key.toLowerCase()] = true;
-  if (e.key === ' ') {
-    e.preventDefault();
-    if (characterControls) characterControls.switchRunToggle();
+function updateHud() {
+  // text fallback
+  hudText.textContent = `Reports: ${reportsCollected}/${totalReports} | Time: ${formatTime(timeMsLeft)}`;
+  // numeric sections
+  reportsCounter.textContent = `${reportsCollected} / ${totalReports}`;
+  timeValue.textContent = formatTime(timeMsLeft);
+  // progress bar
+  const pct = START_TIME_MS > 0 ? Math.max(0, Math.min(1, timeMsLeft / START_TIME_MS)) : 0;
+  progressBar.style.width = `${Math.round(pct * 100)}%`;
+
+  if (!allReportsAnnounced && reportsCollected >= totalReports) {
+    allReportsAnnounced = true;
+    const tip = document.createElement('div');
+    tip.textContent = 'All reports collected! Go through the portal.';
+    tip.style.marginTop = '4px';
+    tip.style.opacity = '0.9';
+    hud.appendChild(tip);
   }
-});
-document.addEventListener('keyup', (e) => {
-  keysPressed[e.key.toLowerCase()] = false;
-});
-
-playBtn.addEventListener('click', () => {
-  if (gameEnded) return;
-  gameStarted = true;
-  gamePaused = false;
-  playBtn.disabled = true;
-  pauseBtn.disabled = false;
-});
-pauseBtn.addEventListener('click', () => {
-  if (!gameStarted || gameEnded) return;
-  gamePaused = true;
-  playBtn.disabled = false;
-  pauseBtn.disabled = true;
-});
-rstBtn.addEventListener('click', () => location.reload());
-
-const toggleControls = (forceState) => {
-  const isHidden = controlsPanel.classList.contains('is-hidden');
-  const shouldOpen = typeof forceState === 'boolean' ? forceState : isHidden;
-  controlsPanel.classList.toggle('is-hidden', !shouldOpen);
-  ctrlBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
-};
-ctrlBtn.addEventListener('click', () => toggleControls());
-document.addEventListener('keydown', (e) => {
-  if (e.key === '?' || (e.shiftKey && e.key === '/')) toggleControls();
-  if (e.key === 'Escape') toggleControls(false);
-});
+}
+updateHud();
 
 /* =========================
    LIGHTS & GROUND
@@ -371,10 +376,12 @@ scene.add(ground);
 ========================= */
 function addAxisGuides() {
   const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-  const makeLine = (a, b) => new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints([a, b]),
-    material
-  );
+  const makeLine = (a, b) => {
+    const geom = new THREE.BufferGeometry().setFromPoints([a, b]);
+    const line = new THREE.Line(geom, material);
+    line.renderOrder = 1;
+    return line;
+  };
   const L = 200;
   scene.add(makeLine(new THREE.Vector3(-L, 0, 0), new THREE.Vector3(L, 0, 0)));
   scene.add(makeLine(new THREE.Vector3(0, -L, 0), new THREE.Vector3(0, L, 0)));
@@ -387,28 +394,6 @@ function addAxisGuides() {
 }
 addAxisGuides();
 
-<<<<<<< HEAD
-// ------------------- Controls -------------------
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.06;
-controls.target.set(0, 1, 0);
-
-// ------------------- Loaders -------------------
-const loader = new GLTFLoader();
-
-// Vehicle templates
-let carTemplates = [];
-
-// Lanes (will be configured from Cube008/Cube009 after environment loads)
-let laneSpecs = [];
-const lanes = [];
-let worldBounds = null; // { minX, maxX, minZ, maxZ }
-let teleportTarget = null; // Cube002 for teleporting to west.html
-
-// ------------------- Helper Functions -------------------
-=======
->>>>>>> 1211978 (fix ui on second part)
 function setShadowFlags(object3d) {
   object3d.traverse((obj) => {
     if (obj.isMesh) {
@@ -417,6 +402,7 @@ function setShadowFlags(object3d) {
     }
   });
 }
+
 function focusCameraOnPlayer() {
   if (!playerModel) return;
   const eye = new THREE.Vector3(
@@ -432,6 +418,7 @@ function focusCameraOnPlayer() {
   camera.position.copy(eye);
   controls.target.copy(tgt);
 }
+
 function findByNameDeep(root, nameLower) {
   let found = null;
   root.traverse((child) => {
@@ -443,15 +430,24 @@ function findByNameDeep(root, nameLower) {
 }
 
 /* =========================
-   LOADERS & WORLD
+   CONTROLS
+========================= */
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.target.set(0, 1, 0);
+
+/* =========================
+   LOADER / WORLD
 ========================= */
 const loader = new GLTFLoader();
 
-// Vehicles
+// Vehicle templates & lanes
 let carTemplates = [];
 let laneSpecs = [];
 const lanes = [];
 let worldBounds = null; // { minX, maxX, minZ, maxZ }
+let teleportTarget = null; // Cube002 area for teleport
 
 function cloneVehicle(template, x, z) {
   if (!template) return null;
@@ -482,7 +478,6 @@ function buildLanes() {
     const spacing = Math.max(4, spec.spacing || 10);
     const computedCount = Math.max(3, Math.floor(laneLength / spacing));
     const count = spec.count && spec.count > 0 ? spec.count : computedCount;
-
     for (let i = 0; i < count; i++) {
       const z = spec.startZ + (spec.dir > 0 ? i * spacing : -i * spacing);
       const mesh = cloneVehicle(template, spec.x, z);
@@ -492,8 +487,7 @@ function buildLanes() {
   });
 }
 
-<<<<<<< HEAD
-// ------------------- Load and Inspect Carcross.glb -------------------
+/* Inspect carcross.glb (optional) */
 loader.load(
   '/models/carcross.glb',
   (gltf) => {
@@ -507,14 +501,7 @@ loader.load(
   (err) => console.error('Failed to load carcross.glb', err)
 );
 
-// ------------------- Load Environment -------------------
-=======
-// Environment
-let characterControls = null;
-let playerModel = null;
-let playerStart = null;
-
->>>>>>> 1211978 (fix ui on second part)
+/* Load Environment */
 loader.load(
   '/models/scene.glb',
   (gltf) => {
@@ -535,9 +522,17 @@ loader.load(
     carTemplates = [];
     env.traverse((obj) => {
       const n = (obj.name || '').toLowerCase();
-      if (/^cube0(1[6-9]|2[0-6])$/.test(n)) carTemplates.push(obj);
+      if (/^cube0(1[6-9]|2[0-6])$/.test(n)) {
+        carTemplates.push(obj);
+      }
     });
-    carTemplates.forEach(t => (t.visible = false));
+
+    if (carTemplates.length === 0) {
+      console.warn('⚠️ No car templates (cube016..cube026) found in scene.glb');
+    } else {
+      console.log(`✅ Found ${carTemplates.length} car templates:`, carTemplates.map(o => o.name));
+      carTemplates.forEach(t => (t.visible = false)); // hide originals
+    }
 
     // Lanes (cube008 & cube009)
     const laneNames = ['cube008', 'cube009'];
@@ -557,109 +552,6 @@ loader.load(
       }
     });
 
-<<<<<<< HEAD
-    if (carTemplates.length === 0) {
-      console.warn('⚠️ No car1–car6 found in scene.glb');
-    } else {
-      console.log(`✅ Found ${carTemplates.length} car templates:`, carTemplates.map(o => o.name));
-      carTemplates.forEach(t => (t.visible = false)); // hide originals
-      // Configure lanes from Cube008 and Cube009 (each road will have 2 sub-lanes)
-      const laneNames = ['cube008', 'cube009'];
-      const foundLanes = [];
-      laneNames.forEach((lname) => {
-        const laneObj = findByNameDeep(env, lname);
-        if (laneObj) {
-          // Compute world-space bbox to determine z extents and x position
-          const box = new THREE.Box3().setFromObject(laneObj);
-          // Some lanes might be rotated; use center x
-          const center = new THREE.Vector3();
-          box.getCenter(center);
-          const minZ = Math.min(box.min.z, box.max.z);
-          const maxZ = Math.max(box.min.z, box.max.z);
-          const laneWidthX = Math.abs(box.max.x - box.min.x);
-          // Two sub-lanes inside the road width (quarter offsets to keep within boundaries)
-          const xLeft = center.x - laneWidthX * 0.25;
-          const xRight = center.x + laneWidthX * 0.25;
-          foundLanes.push({ x: center.x, minZ, maxZ, xLeft, xRight });
-        }
-      });
-
-      // Compute player start at the center of mesh named 'Cube'
-      const startMesh = findByNameDeep(env, 'cube');
-      if (startMesh) {
-        const startBox = new THREE.Box3().setFromObject(startMesh);
-        const startCenter = new THREE.Vector3();
-        startBox.getCenter(startCenter);
-        // place slightly above its top so the model isn't intersecting
-        playerStart = new THREE.Vector3(startCenter.x, startBox.max.y + 0.02, startCenter.z);
-        console.log('Spawn set from Cube at', playerStart);
-        if (playerModel) {
-          playerModel.position.copy(playerStart);
-        }
-      } else {
-        console.warn('Mesh named "Cube" not found for spawn.');
-      }
-
-      // Find Cube002 for teleport to west.html
-      const cube002 = findByNameDeep(env, 'cube002');
-      if (cube002) {
-        // Ensure world matrices are current, then build a generous vertical box
-        cube002.updateMatrixWorld(true);
-        teleportTarget = new THREE.Box3().setFromObject(cube002);
-        // Expand vertically so the player intersects even if Cube002 is flat on ground
-        teleportTarget.min.y -= 1000;
-        teleportTarget.max.y += 1000;
-
-        // Optional: visualize the teleport area for debugging
-        const helper = new THREE.Box3Helper(teleportTarget, 0x00ff88);
-        scene.add(helper);
-
-        console.log('✅ Teleport target (Cube002) found');
-      } else {
-        console.warn('⚠️ Cube002 not found for teleport');
-      }
-
-      if (foundLanes.length === 0) {
-        console.warn('⚠️ Cube008/Cube009 not found. Using fallback lane positions.');
-        // 2 roads × 2 sub-lanes fallback
-        laneSpecs = [
-          { x: -4.0, speed: 9.0,  dir:  1, count: 3, spacing: 18, startZ: -60, minZ: -60, maxZ: 60 },
-          { x: -2.0, speed: 12.0, dir: -1, count: 2, spacing: 22, startZ:  60, minZ: -60, maxZ: 60 },
-          { x:  2.0, speed: 10.0, dir:  1, count: 2, spacing: 20, startZ: -60, minZ: -60, maxZ: 60 },
-          { x:  4.0, speed: 13.0, dir: -1, count: 3, spacing: 18, startZ:  60, minZ: -60, maxZ: 60 },
-        ];
-      } else {
-        // For each road, create two sub-lanes with alternating directions
-        laneSpecs = [];
-        foundLanes.slice(0, 2).forEach((lane) => {
-          const denseSpacing = 10; // tighter spacing to keep lanes occupied
-          // Left sub-lane (forward)
-          laneSpecs.push({
-            x: lane.xLeft,
-            speed: 8.0,
-            dir: 1,
-            count: 0, // derive in buildLanes
-            spacing: denseSpacing,
-            startZ: lane.minZ,
-            minZ: lane.minZ,
-            maxZ: lane.maxZ,
-          });
-          // Right sub-lane (backward)
-          laneSpecs.push({
-            x: lane.xRight,
-            speed: 8.0,
-            dir: -1,
-            count: 0, // derive in buildLanes
-            spacing: denseSpacing,
-            startZ: lane.maxZ,
-            minZ: lane.minZ,
-            maxZ: lane.maxZ,
-          });
-        });
-      }
-
-      buildLanes();
-=======
     // Spawn from 'cube'
     const startMesh = findByNameDeep(env, 'cube');
     if (startMesh) {
@@ -667,12 +559,32 @@ loader.load(
       const startCenter = new THREE.Vector3();
       startBox.getCenter(startCenter);
       playerStart = new THREE.Vector3(startCenter.x, startBox.max.y + 0.02, startCenter.z);
-      if (playerModel) playerModel.position.copy(playerStart);
->>>>>>> 1211978 (fix ui on second part)
+      console.log('Spawn set from Cube at', playerStart);
+      if (playerModel) {
+        playerModel.position.copy(playerStart);
+      }
+    } else {
+      console.warn('Mesh named "Cube" not found for spawn.');
+    }
+
+    // Teleport trigger from 'cube002'
+    const cube002 = findByNameDeep(env, 'cube002');
+    if (cube002) {
+      cube002.updateMatrixWorld(true);
+      teleportTarget = new THREE.Box3().setFromObject(cube002);
+      // Extend vertically to ensure intersection
+      teleportTarget.min.y -= 1000;
+      teleportTarget.max.y += 1000;
+
+      const helper = new THREE.Box3Helper(teleportTarget, 0x00ff88);
+      scene.add(helper);
+      console.log('✅ Teleport target (Cube002) found');
+    } else {
+      console.warn('⚠️ Cube002 not found for teleport');
     }
 
     if (foundLanes.length === 0) {
-      // Fallback
+      console.warn('⚠️ Cube008/Cube009 not found. Using fallback lane positions.');
       laneSpecs = [
         { x: -4.0, speed: 9.0,  dir:  1, count: 3, spacing: 18, startZ: -60, minZ: -60, maxZ: 60 },
         { x: -2.0, speed: 12.0, dir: -1, count: 2, spacing: 22, startZ:  60, minZ: -60, maxZ: 60 },
@@ -680,17 +592,18 @@ loader.load(
         { x:  4.0, speed: 13.0, dir: -1, count: 3, spacing: 18, startZ:  60, minZ: -60, maxZ: 60 },
       ];
     } else {
-      // Two roads × two sub-lanes each
       laneSpecs = [];
       foundLanes.slice(0, 2).forEach((lane) => {
-        const denseSpacing = 10;
+        const denseSpacing = 10; // tighter spacing to keep lanes occupied
+        // Left sub-lane (forward)
         laneSpecs.push({
-          x: lane.xLeft, speed: 8.0, dir:  1, count: 0, spacing: denseSpacing,
-          startZ: lane.minZ, minZ: lane.minZ, maxZ: lane.maxZ
+          x: lane.xLeft, speed: 8.0, dir: 1, count: 0, spacing: denseSpacing,
+          startZ: lane.minZ, minZ: lane.minZ, maxZ: lane.maxZ,
         });
+        // Right sub-lane (backward)
         laneSpecs.push({
           x: lane.xRight, speed: 8.0, dir: -1, count: 0, spacing: denseSpacing,
-          startZ: lane.maxZ, minZ: lane.minZ, maxZ: lane.maxZ
+          startZ: lane.maxZ, minZ: lane.minZ, maxZ: lane.maxZ,
         });
       });
     }
@@ -701,7 +614,11 @@ loader.load(
   (err) => console.error('Failed to load environment scene.glb', err)
 );
 
-// Character
+/* Load Character */
+let characterControls = null;
+let playerModel = null;
+let playerStart = null;
+
 loader.load(
   '/models/Soldier.glb',
   (gltf) => {
@@ -718,55 +635,70 @@ loader.load(
       animationsMap.set(clip.name, mixer.clipAction(clip));
     });
 
-    characterControls = new CharacterControls(playerModel, mixer, animationsMap, controls, camera, 'Idle');
+    characterControls = new CharacterControls(
+      playerModel,
+      mixer,
+      animationsMap,
+      controls,
+      camera,
+      'Idle'
+    );
   },
   undefined,
   (err) => console.error('Failed to load Soldier.glb', err)
 );
 
-<<<<<<< HEAD
-// ------------------- Teleport to West -------------------
+/* =========================
+   TELEPORT HANDLER
+========================= */
 function teleportToWest() {
   gamePaused = true;
   gameEnded = true;
+  setButtonsState();
 
   // Save game state
   localStorage.setItem('gameState', JSON.stringify({ reportsCollected, totalReports, timeMsLeft }));
 
-  // Create splash screen overlay
+  // Splash overlay
   const overlay = document.createElement('div');
-  overlay.style.position = 'fixed';
-  overlay.style.inset = '0';
-  overlay.style.display = 'flex';
-  overlay.style.flexDirection = 'column';
-  overlay.style.alignItems = 'center';
-  overlay.style.justifyContent = 'center';
-  overlay.style.background = 'rgba(0,0,0,0.85)';
-  overlay.style.color = '#fff';
-  overlay.style.fontFamily = 'sans-serif';
-  overlay.style.textAlign = 'center';
-  overlay.style.padding = '24px';
-  overlay.style.zIndex = '10001';
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    inset: '0',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(0,0,0,0.85)',
+    color: '#fff',
+    fontFamily: 'sans-serif',
+    textAlign: 'center',
+    padding: '24px',
+    zIndex: '10001',
+  });
 
   const text = document.createElement('div');
-  text.style.maxWidth = '720px';
-  text.style.lineHeight = '1.6';
-  text.style.fontSize = '20px';
-  text.style.marginBottom = '20px';
-  text.textContent = "Great Job, but unfortunately it seems like one of your reports does not have signatures from 3 lectures, find them at West to get your signatures.";
+  Object.assign(text.style, {
+    maxWidth: '720px',
+    lineHeight: '1.6',
+    fontSize: '20px',
+    marginBottom: '20px',
+  });
+  text.textContent = 'Great Job, but one of your reports is missing signatures from 3 lecturers. Find them at West to get your signatures.';
 
   const btn = document.createElement('button');
   btn.textContent = 'CONTINUE';
-  btn.style.cursor = 'pointer';
-  btn.style.padding = '12px 24px';
-  btn.style.fontSize = '16px';
-  btn.style.border = 'none';
-  btn.style.borderRadius = '6px';
-  btn.style.background = '#00a86b';
-  btn.style.color = '#fff';
+  Object.assign(btn.style, {
+    cursor: 'pointer',
+    padding: '12px 24px',
+    fontSize: '16px',
+    border: 'none',
+    borderRadius: '6px',
+    background: '#00a86b',
+    color: '#fff',
+  });
   btn.addEventListener('click', () => {
-    overlay.style.opacity = '0';
     overlay.style.transition = 'opacity 0.3s';
+    overlay.style.opacity = '0';
     setTimeout(() => {
       window.location.href = '/west.html';
     }, 300);
@@ -777,7 +709,9 @@ function teleportToWest() {
   document.body.appendChild(overlay);
 }
 
-// ------------------- Input -------------------
+/* =========================
+   INPUT
+========================= */
 const keysPressed = {};
 document.addEventListener('keydown', (e) => {
   keysPressed[e.key.toLowerCase()] = true;
@@ -790,12 +724,9 @@ document.addEventListener('keyup', (e) => {
   keysPressed[e.key.toLowerCase()] = false;
 });
 
-// ------------------- Animate -------------------
-=======
 /* =========================
    MINIMAP
 ========================= */
->>>>>>> 1211978 (fix ui on second part)
 const clock = new THREE.Clock();
 const mapWidthPx = 200;
 const mapHeightPx = 200;
@@ -820,17 +751,9 @@ const mapCamera = new THREE.OrthographicCamera(
 renderer.setAnimationLoop(() => {
   const dt = clock.getDelta();
 
-<<<<<<< HEAD
-  // 1) Update character and map camera, or orbit controls when idle
-    if (characterControls && !gameEnded && !gamePaused) {
-        characterControls.update(dt, keysPressed);
-=======
-  // Update character & controls
+  // 1) Update character & controls
   if (characterControls && !gameEnded && !gamePaused) {
     characterControls.update(dt, keysPressed);
-
-    // Update minimap camera to follow player
->>>>>>> 1211978 (fix ui on second part)
     if (playerModel) {
       mapCamera.position.set(playerModel.position.x, 50, playerModel.position.z);
       mapCamera.lookAt(playerModel.position.x, 0, playerModel.position.z);
@@ -839,11 +762,7 @@ renderer.setAnimationLoop(() => {
     controls.update();
   }
 
-<<<<<<< HEAD
   // 2) Intro camera animation
-=======
-  // Intro cam
->>>>>>> 1211978 (fix ui on second part)
   if (introCamAnimating) {
     introCamT += dt / introCamDuration;
     const t = Math.min(1, introCamT);
@@ -852,35 +771,22 @@ renderer.setAnimationLoop(() => {
     if (t >= 1) introCamAnimating = false;
   }
 
-<<<<<<< HEAD
-  // 3) Clamp player within environment bounds
+  // 3) Clamp player to world
   if (playerModel && worldBounds) {
     const pad = 0.5;
-    const px = THREE.MathUtils.clamp(
+    playerModel.position.x = THREE.MathUtils.clamp(
       playerModel.position.x,
       worldBounds.minX + pad,
       worldBounds.maxX - pad
     );
-    const pz = THREE.MathUtils.clamp(
+    playerModel.position.z = THREE.MathUtils.clamp(
       playerModel.position.z,
       worldBounds.minZ + pad,
       worldBounds.maxZ - pad
     );
-    playerModel.position.x = px;
-    playerModel.position.z = pz;
   }
 
-  // 4) Clamp camera horizontally within bounds (skip during intro anim)
-=======
-  // Clamp player to world
-  if (playerModel && worldBounds) {
-    const pad = 0.5;
-    playerModel.position.x = THREE.MathUtils.clamp(playerModel.position.x, worldBounds.minX + pad, worldBounds.maxX - pad);
-    playerModel.position.z = THREE.MathUtils.clamp(playerModel.position.z, worldBounds.minZ + pad, worldBounds.maxZ - pad);
-  }
-
-  // Clamp camera X
->>>>>>> 1211978 (fix ui on second part)
+  // 4) Clamp camera X (skip during intro)
   if (worldBounds && !introCamAnimating) {
     const padCam = 0.5;
     const minX = worldBounds.minX + padCam;
@@ -889,11 +795,7 @@ renderer.setAnimationLoop(() => {
     camera.position.x = THREE.MathUtils.clamp(camera.position.x, minX, maxX);
   }
 
-<<<<<<< HEAD
   // 5) Move vehicles
-=======
-  // Move vehicles
->>>>>>> 1211978 (fix ui on second part)
   if (!gameEnded && !gamePaused) {
     lanes.forEach((lane) => {
       lane.vehicles.forEach((v) => {
@@ -904,59 +806,14 @@ renderer.setAnimationLoop(() => {
     });
   }
 
-<<<<<<< HEAD
-  // 6) Collisions and teleport
+  // 6) Collisions + teleport
   if (playerModel && !gameEnded && !gamePaused) {
     const playerBox = new THREE.Box3().setFromObject(playerModel);
-    
+
     if (teleportTarget && playerBox.intersectsBox(teleportTarget)) {
       teleportToWest();
     }
-    
-    let hit = false;
-    for (const lane of lanes) {
-      for (const v of lane.vehicles) {
-        const box = new THREE.Box3().setFromObject(v.mesh);
-        if (playerBox.intersectsBox(box)) { hit = true; break; }
-      }
-      if (hit) break;
-             }
-             if (hit) {
-                 if (playerStart) playerModel.position.copy(playerStart);
-      else playerModel.position.set(0, 0, 0);
-                     mapCamera.position.set(playerModel.position.x, 50, playerModel.position.z);
-                     mapCamera.lookAt(playerModel.position.x, 0, playerModel.position.z);
-         }
-     }
 
-  // 7) Timer and HUD
-  if (!gameEnded && !gamePaused) {
-        timeMsLeft -= dt * 1000;
-        if (timeMsLeft <= 0) {
-            timeMsLeft = 0;
-            gameEnded = true;
-    }
-    updateHud();
-  }
-
-  // 8) Render main scene
-    renderer.setScissorTest(false);
-    renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
-  renderer.clear(true, true);
-    renderer.render(scene, camera);
-
-  // 9) Render minimap (bottom-right)
-    renderer.setScissorTest(true);
-  const mapVPLeft = window.innerWidth - mapWidthPx - mapMargin;
-  const mapVPBottom = mapMargin;
-    renderer.setScissor(mapVPLeft, mapVPBottom, mapWidthPx, mapHeightPx);
-    renderer.setViewport(mapVPLeft, mapVPBottom, mapWidthPx, mapHeightPx);
-  renderer.clearDepth();
-    renderer.render(scene, mapCamera);
-=======
-  // Collisions reset
-  if (playerModel && !gameEnded && !gamePaused) {
-    const playerBox = new THREE.Box3().setFromObject(playerModel);
     let hit = false;
     outer: for (const lane of lanes) {
       for (const v of lane.vehicles) {
@@ -972,27 +829,24 @@ renderer.setAnimationLoop(() => {
     }
   }
 
-  // Timer / HUD
+  // 7) Timer & HUD
   if (!gameEnded && !gamePaused && gameStarted) {
     timeMsLeft -= dt * 1000;
     if (timeMsLeft <= 0) {
       timeMsLeft = 0;
       gameEnded = true;
-      playBtn.disabled = true;
-      pauseBtn.disabled = true;
+      setButtonsState();
     }
     updateHud();
-    // Persist occasionally if you want:
-    // localStorage.setItem('gameState', JSON.stringify({ reportsCollected, totalReports, timeMsLeft }));
   }
 
-  // Render main
+  // 8) Render main view
   renderer.setScissorTest(false);
   renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
   renderer.clear(true, true);
   renderer.render(scene, camera);
 
-  // Render minimap (bottom-right)
+  // 9) Render minimap (bottom-right)
   renderer.setScissorTest(true);
   const mapVPLeft = window.innerWidth - mapWidthPx - mapMargin;
   const mapVPBottom = mapMargin;
@@ -1000,7 +854,6 @@ renderer.setAnimationLoop(() => {
   renderer.setViewport(mapVPLeft, mapVPBottom, mapWidthPx, mapHeightPx);
   renderer.clearDepth();
   renderer.render(scene, mapCamera);
->>>>>>> 1211978 (fix ui on second part)
   renderer.setScissorTest(false);
 });
 
@@ -1014,7 +867,11 @@ window.addEventListener('resize', () => {
 });
 
 /* =========================
-   EXAMPLE: hook for report pickups
-   (Call incrementReports() when a report is collected)
+   WORLD SETUP VARS
 ========================= */
-// window.incrementReports = incrementReports;
+/*let worldBounds = null; // redeclared above intentionally (kept for clarity)
+let teleportTarget = null;
+let playerStart = null;
+let carTemplates = []; // shadowed above; kept consistent with usage
+let laneSpecs = [];
+const lanes = [];*/
