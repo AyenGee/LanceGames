@@ -328,7 +328,7 @@ function setupStartOverlay() {
     const overlay = document.createElement('div'); overlay.id = 'start-overlay';
     const text = document.createElement('div'); text.className = 'start-text'; text.textContent = 'Find the report and submit it before time runs out. NOTE, there are multiple challenges in the way. PLAY!';
     const btn = document.createElement('button'); btn.className = 'start-btn'; btn.textContent = 'PLAY';
-    btn.addEventListener('click', () => { gameStarted = true; gameEnded = false; timeMsLeft = timeMsTotal; overlay.remove(); });
+    btn.addEventListener('click', () => { gameStarted = true; gameEnded = false; timeMsLeft = timeMsTotal; persistTimerState(true); overlay.remove(); });
     overlay.appendChild(text); overlay.appendChild(btn); document.body.appendChild(overlay);
     setupHUD(); // Make sure HUD is set up when game starts
 }
@@ -351,8 +351,32 @@ function spawnPapers() {
 }
 //----------------------------------
 
+// === Timer Persistence Helpers ===
+const TIMER_KEY = 'gameTimer';
+function readPersistedTimer() {
+    try {
+        const raw = localStorage.getItem(TIMER_KEY);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || typeof obj.timeMsLeft !== 'number') return null;
+        const last = typeof obj.lastUpdate === 'number' ? obj.lastUpdate : Date.now();
+        const running = !!obj.running;
+        let left = obj.timeMsLeft;
+        if (running) {
+            const delta = Date.now() - last;
+            left = Math.max(0, left - delta);
+        }
+        return { timeMsLeft: left };
+    } catch { return null; }
+}
+function persistTimerState(running) {
+    try {
+        localStorage.setItem(TIMER_KEY, JSON.stringify({ timeMsLeft, lastUpdate: Date.now(), running: !!running }));
+    } catch {}
+}
+
 // === HUD (rich controls) ===
-let hudEl = null; let hudTextEl = null; let pauseBtn = null; let playBtn = null; let timeMsTotal = 180 * 1000; let timeMsLeft = timeMsTotal; let gameEnded = false; let gamePaused = false;
+let hudEl = null; let hudTextEl = null; let pauseBtn = null; let playBtn = null; let timeMsTotal = 180 * 1000; let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal); let gameEnded = false; let gamePaused = false;
 export function setupHUD() {
     // Main HUD container
     hudEl = document.createElement('div');
@@ -395,6 +419,7 @@ export function setupHUD() {
     pauseBtn.addEventListener('click', () => {
         if (!gameStarted || gameEnded) return;
         gamePaused = true;
+        persistTimerState(false);
     });
 
     // Play Button
@@ -405,6 +430,7 @@ export function setupHUD() {
         if (gameEnded) return;
         gameStarted = true;
         gamePaused = false;
+        persistTimerState(true);
     });
 
     const ctrlBtn = document.createElement('button');
@@ -515,6 +541,7 @@ function checkCollisions(character) {
 // ... (paste teleportToMiniChallenge and loadCarcross functions here) ...
 function teleportToMiniChallenge() {
     const state = { reportsCollected, totalReports, timeMsLeft, }; localStorage.setItem("gameState", JSON.stringify(state));
+    persistTimerState(true);
     gamePaused = true; gameStarted = false; gameEnded = true; animatee = false;
     loadCarcross(); // Removed callback as it wasn't used
 }
@@ -595,6 +622,7 @@ function animate() {
             showTimesUp();
         }
         updateHUD();
+        persistTimerState(true);
     }
 
     if (!isFirstPerson) orbitControls.update(); // Disable orbit update in FPS

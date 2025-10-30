@@ -29,6 +29,72 @@ controls.maxDistance = 1.8;
 controls.zoomSpeed = 0.5;
 controls.maxPolarAngle = Math.PI / 2 - 0.05; // avoid going below ground
 
+// === Shared Timer (Persistent Across Pages) ===
+const TIMER_KEY = 'gameTimer';
+function readPersistedTimer() {
+    try {
+        const raw = localStorage.getItem(TIMER_KEY);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || typeof obj.timeMsLeft !== 'number') return null;
+        const last = typeof obj.lastUpdate === 'number' ? obj.lastUpdate : Date.now();
+        const running = !!obj.running;
+        let left = obj.timeMsLeft;
+        if (running) {
+            const delta = Date.now() - last;
+            left = Math.max(0, left - delta);
+        }
+        return { timeMsLeft: left };
+    } catch { return null; }
+}
+function persistTimerState(timeMsLeft, running) {
+    try { localStorage.setItem(TIMER_KEY, JSON.stringify({ timeMsLeft, lastUpdate: Date.now(), running: !!running })); } catch {}
+}
+let timeMsTotal = 180000;
+let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
+let timerPaused = false;
+function formatTime(ms) { const totalSec = Math.max(0, Math.ceil(ms / 1000)); const m = Math.floor(totalSec / 60).toString().padStart(2, '0'); const s = (totalSec % 60).toString().padStart(2, '0'); return `${m}:${s}`; }
+
+// Consistent HUD (progress bar like main.js)
+let hudEl = null; let pauseBtn = null; let playBtn = null;
+function updateHUD() {
+    const progressBar = document.getElementById('time-progress-bar');
+    if (progressBar) {
+        const progressPercent = (timeMsLeft / timeMsTotal) * 100;
+        progressBar.style.width = `${Math.max(0, progressPercent)}%`;
+        progressBar.classList.remove('time-progress-bar--ok', 'time-progress-bar--mid', 'time-progress-bar--low');
+        if (progressPercent < 25) { progressBar.classList.add('time-progress-bar--low'); }
+        else if (progressPercent < 50) { progressBar.classList.add('time-progress-bar--mid'); }
+        else { progressBar.classList.add('time-progress-bar--ok'); }
+    }
+}
+function setupHUD() {
+    hudEl = document.createElement('div');
+    hudEl.className = 'hud';
+    const progressContainer = document.createElement('div');
+    progressContainer.className = 'progress-container';
+    const progressBar = document.createElement('div');
+    progressBar.id = 'time-progress-bar';
+    progressBar.className = 'time-progress-bar';
+    progressContainer.appendChild(progressBar);
+    const controlsRow = document.createElement('div');
+    controlsRow.className = 'controls-row';
+    playBtn = document.createElement('button');
+    playBtn.className = 'btn btn--play';
+    playBtn.textContent = '▶ PLAY';
+    playBtn.addEventListener('click', () => { timerPaused = false; persistTimerState(timeMsLeft, true); });
+    pauseBtn = document.createElement('button');
+    pauseBtn.className = 'btn btn--pause';
+    pauseBtn.textContent = '⏸ PAUSE';
+    pauseBtn.addEventListener('click', () => { timerPaused = true; persistTimerState(timeMsLeft, false); });
+    controlsRow.appendChild(playBtn); controlsRow.appendChild(pauseBtn);
+    hudEl.appendChild(progressContainer);
+    hudEl.appendChild(controlsRow);
+    document.body.appendChild(hudEl);
+    updateHUD();
+}
+setupHUD();
+
 // === First-Person Controls (like west.js/main.js) ===
 let mouseSensitivity = 0.002;
 let yaw = 0;
@@ -384,6 +450,13 @@ function animate() {
             window.location.href = 'west.html';
             return;
         }
+    }
+    // Timer update & persist
+    if (!timerPaused) {
+        timeMsLeft -= dt * 1000;
+        if (timeMsLeft <= 0) { timeMsLeft = 0; timerPaused = true; }
+        updateHUD();
+        persistTimerState(timeMsLeft, true);
     }
     renderer.render(scene, camera);
 }

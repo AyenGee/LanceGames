@@ -7,7 +7,30 @@ import { CharacterControls } from './characterControls.js';
 const savedState = JSON.parse(localStorage.getItem('gameState') || '{}');
 let reportsCollected = savedState.reportsCollected || 0;
 let totalReports = savedState.totalReports || 3;
-let timeMsLeft = savedState.timeMsLeft || 120000;
+
+// Shared timer persistence
+const TIMER_KEY = 'gameTimer';
+function readPersistedTimer() {
+  try {
+    const raw = localStorage.getItem(TIMER_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj.timeMsLeft !== 'number') return null;
+    const last = typeof obj.lastUpdate === 'number' ? obj.lastUpdate : Date.now();
+    const running = !!obj.running;
+    let left = obj.timeMsLeft;
+    if (running) {
+      const delta = Date.now() - last;
+      left = Math.max(0, left - delta);
+    }
+    return { timeMsLeft: left };
+  } catch { return null; }
+}
+function persistTimerState(timeMsLeft, running) {
+  try { localStorage.setItem(TIMER_KEY, JSON.stringify({ timeMsLeft, lastUpdate: Date.now(), running: !!running })); } catch {}
+}
+let timeMsTotal = 180000;
+let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
 let gamePaused = false;
 let gameEnded = false;
 let allReportsAnnounced = false;
@@ -49,6 +72,14 @@ hud.style.display = 'flex';
 hud.style.flexDirection = 'column';
 hud.style.gap = '8px';
 
+// Consistent progress bar like main.js
+const progressContainer = document.createElement('div');
+progressContainer.className = 'progress-container';
+const progressBar = document.createElement('div');
+progressBar.id = 'time-progress-bar';
+progressBar.className = 'time-progress-bar';
+progressContainer.appendChild(progressBar);
+
 const hudText = document.createElement('div');
 hudText.textContent = '';
 
@@ -67,6 +98,7 @@ playBtn.style.color = '#fff';
 playBtn.addEventListener('click', () => {
   if (gameEnded) return;
   gamePaused = false;
+  persistTimerState(timeMsLeft, true);
 });
 
 const pauseBtn = document.createElement('button');
@@ -79,11 +111,13 @@ pauseBtn.style.background = '#cc3333';
 pauseBtn.style.color = '#fff';
 pauseBtn.addEventListener('click', () => {
   gamePaused = true;
+  persistTimerState(timeMsLeft, false);
 });
 
 controlsRow.appendChild(playBtn);
 controlsRow.appendChild(pauseBtn);
 
+hud.appendChild(progressContainer);
 hud.appendChild(hudText);
 hud.appendChild(controlsRow);
 document.body.appendChild(hud);
@@ -133,6 +167,7 @@ gamePaused = true;
     introEndEye.set(base.x - 7, (playerModel ? playerModel.position.y : 0) + 3.5, base.z);
     introEndTarget.set(base.x, (playerModel ? playerModel.position.y : 0) + 1, base.z);
     overlay.remove();
+    persistTimerState(timeMsLeft, true);
   });
 
   overlay.appendChild(text);
@@ -149,6 +184,15 @@ function formatTime(ms) {
 
 function updateHud() {
   hudText.textContent = `Reports: ${reportsCollected}/${totalReports} | Time: ${formatTime(timeMsLeft)}`;
+  const pb = document.getElementById('time-progress-bar');
+  if (pb) {
+    const progressPercent = (timeMsLeft / timeMsTotal) * 100;
+    pb.style.width = `${Math.max(0, progressPercent)}%`;
+    pb.classList.remove('time-progress-bar--ok', 'time-progress-bar--mid', 'time-progress-bar--low');
+    if (progressPercent < 25) { pb.classList.add('time-progress-bar--low'); }
+    else if (progressPercent < 50) { pb.classList.add('time-progress-bar--mid'); }
+    else { pb.classList.add('time-progress-bar--ok'); }
+  }
   if (!allReportsAnnounced && reportsCollected >= totalReports) {
     allReportsAnnounced = true;
     const tip = document.createElement('div');
@@ -486,6 +530,7 @@ function teleportToWest() {
 
   // Save game state
   localStorage.setItem('gameState', JSON.stringify({ reportsCollected, totalReports, timeMsLeft }));
+  persistTimerState(timeMsLeft, true);
 
   // Create splash screen overlay
   const overlay = document.createElement('div');
@@ -653,6 +698,7 @@ renderer.setAnimationLoop(() => {
             gameEnded = true;
     }
     updateHud();
+    persistTimerState(timeMsLeft, true);
   }
 
   // 8) Render main scene
