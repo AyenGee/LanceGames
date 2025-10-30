@@ -55,12 +55,7 @@ loader.load('/models/final.glb', (gltf) => {
     }
   });
   scene.add(env);
-
-  // If soldier already loaded, snap to plane
-  if (playerModel && planeObject) {
-    const planeBox = new THREE.Box3().setFromObject(planeObject);
-    playerModel.position.y = planeBox.max.y;
-  }
+  
 }, undefined, (err) => console.error('Failed to load final.glb', err));
 
 // Load Soldier and place on Plane top
@@ -70,12 +65,7 @@ loader.load('/models/Soldier.glb', (gltf) => {
     if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
   });
   // Default position
-  playerModel.position.set(0, 0, 0);
-  // Snap to plane if available
-  if (planeObject) {
-    const planeBox = new THREE.Box3().setFromObject(planeObject);
-    playerModel.position.y = planeBox.max.y;
-  }
+  playerModel.position.set(24.02, -0.21, 1.65);
   scene.add(playerModel);
 
   const mixer = new THREE.AnimationMixer(playerModel);
@@ -112,6 +102,8 @@ function animate() {
     if (toCam.lengthSq() === 0) toCam.set(0, 0, desiredDistance);
     toCam.setLength(desiredDistance);
     camera.position.copy(controls.target.clone().add(toCam));
+    // Log character world coordinates each frame
+    console.log(`Soldier position → x=${playerModel.position.x.toFixed(2)}, y=${playerModel.position.y.toFixed(2)}, z=${playerModel.position.z.toFixed(2)}`);
   }
   controls.update();
   renderer.render(scene, camera);
