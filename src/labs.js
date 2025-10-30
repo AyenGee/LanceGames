@@ -267,8 +267,6 @@ let environment;
 let playerModel = null;
 let playerStart = null;
 let planeObject = null; // Floor named Plane004
-let line211Mesh = null; // Reference to Line211 for teleport back
-let hasTeleportedToWest = false; // Ensure single redirect
 
 loader.load("/models/labs.glb", (gltf) => {
     environment = gltf.scene;
@@ -283,21 +281,6 @@ loader.load("/models/labs.glb", (gltf) => {
         console.log(`Name: "${obj.name}" | Type: ${obj.type}`);
     });
     console.log('🔍 === END LABS.GLB LISTING ===');
-    
-    // Ensure all meshes are visible and fully opaque
-    let meshCount = 0;
-    const meshNames = [];
-    environment.traverse((obj) => {
-        if (obj.isMesh) {
-            meshCount++;
-            meshNames.push(obj.name || '(unnamed)');
-            obj.visible = true;
-            const applyMat = (m) => { if (!m) return; m.transparent = false; m.opacity = 1.0; };
-            if (Array.isArray(obj.material)) { obj.material.forEach(applyMat); } else { applyMat(obj.material); }
-        }
-    });
-    console.log(`🧱 Visible meshes: ${meshCount}`);
-    if (meshNames.length) console.log('🧱 Mesh list:', meshNames.join(', '));
     
     // Find floor Plane004 and player spawn
     planeObject = null;
@@ -314,14 +297,10 @@ loader.load("/models/labs.glb", (gltf) => {
         console.warn('⚠️ Plane004 not found in labs.glb');
     }
 
-    // Find player spawn point near mesh named "Line211" (fallback to common patterns)
-    line211Mesh = findByNameDeep(environment, 'Line211');
-    let spawnMesh = line211Mesh;
-    if (!spawnMesh) {
-        spawnMesh = findByNameDeep(environment, 'cube') ||
-                    findByNameDeep(environment, 'spawn') ||
-                    findByNameDeep(environment, 'start');
-    }
+    // Find player spawn point (look for common naming patterns)
+    const spawnMesh = findByNameDeep(environment, 'cube') || 
+                      findByNameDeep(environment, 'spawn') ||
+                      findByNameDeep(environment, 'start');
     
     if (spawnMesh) {
         const spawnBox = new THREE.Box3().setFromObject(spawnMesh);
@@ -333,10 +312,7 @@ loader.load("/models/labs.glb", (gltf) => {
             const planeBox = new THREE.Box3().setFromObject(planeObject);
             y = planeBox.max.y; // stand on floor
         }
-        // Place slightly offset from the spawn mesh so we don't intersect it
-        const offset = new THREE.Vector3(3, 0, 0.7); // 1 meter forward
-        const worldPos = spawnCenter.clone().add(offset);
-        playerStart = new THREE.Vector3(worldPos.x, y, worldPos.z);
+        playerStart = new THREE.Vector3(spawnCenter.x, y, spawnCenter.z);
         console.log('✅ Player spawn found at:', playerStart);
         
         if (playerModel) {
