@@ -36,7 +36,7 @@ let gameStarted = false;
 let gamePaused = false;
 let gameEnded = false;
 let allReportsAnnounced = false;
-
+const listener = new THREE.AudioListener();
 let introCamAnimating = false;
 let introCamT = 0;
 const introCamDuration = 1.2; // seconds
@@ -528,6 +528,22 @@ loader.load(
   (err) => console.error('Failed to load carcross.glb', err)
 );
 
+const audioLoader = new THREE.AudioLoader();
+const backgroundMusic = new THREE.Audio(listener);
+audioLoader.load('assets/ES_Medium, Town Road - Epidemic Sound.mp3', function(buffer) {
+    backgroundMusic.setBuffer(buffer);
+    backgroundMusic.setLoop(true);
+    backgroundMusic.setVolume(0.3); // Set a lower volume for BGM
+    backgroundMusic.play(); // <-- Play it as soon as it's loaded
+});
+audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', function(buffer) {
+    footstepSound.setBuffer(buffer);
+    footstepSound.setLoop(true);
+    footstepSound.setVolume(0.5);
+    // Note: Do not play() here, the controls class will do it.
+});
+const footstepSound = new THREE.Audio(listener);
+
 /* Load Environment */
 loader.load(
   '/models/scene.glb',
@@ -668,7 +684,8 @@ loader.load(
       animationsMap,
       controls,
       camera,
-      'Idle'
+      'Idle', 
+      footstepSound
     );
   },
   undefined,
