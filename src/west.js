@@ -298,6 +298,7 @@ orbitControls.enableDamping = true;
 
 // === Shared Timer (Persistent Across Pages) ===
 const TIMER_KEY = 'gameTimer';
+const SIGN_KEY = 'signatures';
 function readPersistedTimer() {
     try {
         const raw = localStorage.getItem(TIMER_KEY);
@@ -317,6 +318,19 @@ function readPersistedTimer() {
 function persistTimerState(timeMsLeft, running) {
     try { localStorage.setItem(TIMER_KEY, JSON.stringify({ timeMsLeft, lastUpdate: Date.now(), running: !!running })); } catch {}
 }
+function readSignatures() {
+    try {
+        const raw = localStorage.getItem(SIGN_KEY);
+        if (!raw) return new Set();
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return new Set();
+        return new Set(arr);
+    } catch { return new Set(); }
+}
+function persistSignatures(sigSet) {
+    try { localStorage.setItem(SIGN_KEY, JSON.stringify(Array.from(sigSet))); } catch {}
+}
+function getSignatureCount() { return readSignatures().size; }
 let timeMsTotal = 180000;
 let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
 let timerPaused = false;
@@ -332,6 +346,10 @@ function updateHUD() {
         if (progressPercent < 25) { progressBar.classList.add('time-progress-bar--low'); }
         else if (progressPercent < 50) { progressBar.classList.add('time-progress-bar--mid'); }
         else { progressBar.classList.add('time-progress-bar--ok'); }
+    }
+    const reportsCounterEl = document.getElementById('reports-counter');
+    if (reportsCounterEl) {
+        reportsCounterEl.textContent = `${getSignatureCount()}/3`;
     }
 }
 // 1. Hemisphere Light (Sky + Ground ambient lighting for outdoor scenes)
@@ -645,6 +663,8 @@ function updateFirstPersonCamera(delta) {
 // === COLLISION DETECTION ===
 let lastCollisionNPC = null; // Track last NPC to prevent spam
 let lastCharacterPosition = new THREE.Vector3();
+const pageId = 'west';
+const signableWest = new Set(['Renzo','Human']); // two signatures in west: Renzo and Human
 
 function checkCollisions() {
 // ... (no changes needed) ...
@@ -693,7 +713,7 @@ function checkCollisions() {
 			}
 		}
 
-    // Check collision with NPCs (only if not colliding with obstacles)
+    // Check collision with NPCs (only if not colliding with obstacles)
     if (npcs.length > 0) {
 			// Use expanded box for easier NPC detection
 			const npcDetectionBox = collisionBox.clone().expandByScalar(0.5);
@@ -705,8 +725,24 @@ function checkCollisions() {
                 // Collision detected with NPC
                 if (lastCollisionNPC !== npc.name) {
                     lastCollisionNPC = npc.name;
-                    showMessage("Report signed");
-                    console.log(`✅ Collision with ${npc.name} - Report signed!`);
+                    // Only count signatures for designated west NPCs
+                    if (signableWest.has(npc.name)) {
+                        const sigs = readSignatures();
+                        const uniqueId = `${pageId}:${npc.name}`;
+                        if (!sigs.has(uniqueId)) {
+                            sigs.add(uniqueId);
+                            persistSignatures(sigs);
+                            const count = sigs.size;
+                            showMessage(`Report signed (${count}/3)`);
+                            const reportsCounterEl = document.getElementById('reports-counter');
+                            if (reportsCounterEl) reportsCounterEl.textContent = `${count}/3`;
+                            console.log(`✅ Signature recorded for ${uniqueId} → ${count}/3`);
+                        } else {
+                            console.log(`ℹ️ Already signed: ${uniqueId}`);
+                        }
+                    } else {
+                        console.log(`ℹ️ ${npc.name} does not grant a signature in west.`);
+                    }
                 }
                 break; // Only show one message at a time
             }

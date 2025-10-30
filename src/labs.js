@@ -31,6 +31,7 @@ controls.maxPolarAngle = Math.PI / 2 - 0.05; // avoid going below ground
 
 // === Shared Timer (Persistent Across Pages) ===
 const TIMER_KEY = 'gameTimer';
+const SIGN_KEY = 'signatures';
 function readPersistedTimer() {
     try {
         const raw = localStorage.getItem(TIMER_KEY);
@@ -50,6 +51,19 @@ function readPersistedTimer() {
 function persistTimerState(timeMsLeft, running) {
     try { localStorage.setItem(TIMER_KEY, JSON.stringify({ timeMsLeft, lastUpdate: Date.now(), running: !!running })); } catch {}
 }
+function readSignatures() {
+    try {
+        const raw = localStorage.getItem(SIGN_KEY);
+        if (!raw) return new Set();
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return new Set();
+        return new Set(arr);
+    } catch { return new Set(); }
+}
+function persistSignatures(sigSet) {
+    try { localStorage.setItem(SIGN_KEY, JSON.stringify(Array.from(sigSet))); } catch {}
+}
+function getSignatureCount() { return readSignatures().size; }
 let timeMsTotal = 180000;
 let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
 let timerPaused = false;
@@ -66,6 +80,10 @@ function updateHUD() {
         if (progressPercent < 25) { progressBar.classList.add('time-progress-bar--low'); }
         else if (progressPercent < 50) { progressBar.classList.add('time-progress-bar--mid'); }
         else { progressBar.classList.add('time-progress-bar--ok'); }
+    }
+    const reportsCounterEl = document.getElementById('reports-counter');
+    if (reportsCounterEl) {
+        reportsCounterEl.textContent = `${getSignatureCount()}/3`;
     }
 }
 function setupHUD() {
@@ -89,6 +107,15 @@ function setupHUD() {
     pauseBtn.addEventListener('click', () => { timerPaused = true; persistTimerState(timeMsLeft, false); });
     controlsRow.appendChild(playBtn); controlsRow.appendChild(pauseBtn);
     hudEl.appendChild(progressContainer);
+    // Add signatures counter
+    const reportsContainer = document.createElement('div');
+    const reportsLabel = document.createElement('div');
+    reportsLabel.textContent = 'REPORTS:';
+    const reportsCounter = document.createElement('div');
+    reportsCounter.id = 'reports-counter';
+    reportsContainer.appendChild(reportsLabel);
+    reportsContainer.appendChild(reportsCounter);
+    hudEl.appendChild(reportsContainer);
     hudEl.appendChild(controlsRow);
     document.body.appendChild(hudEl);
     updateHUD();
@@ -269,6 +296,7 @@ let playerStart = null;
 let planeObject = null; // Floor named Plane004
 let hasTeleportedToWest = false; // prevent multiple redirects
 let line211Mesh = null; // teleporter back to west
+let labHumanMesh = null; // the NPC in labs that grants the final signature
 
 loader.load("/models/labs.glb", (gltf) => {
     environment = gltf.scene;
@@ -290,6 +318,7 @@ loader.load("/models/labs.glb", (gltf) => {
         if (obj.name === 'Plane004') planeObject = obj;
         // Find teleporter back to west; adjust name if needed in the model
         if (obj.name === 'Line211') line211Mesh = obj;
+        if (obj.name === 'Human') labHumanMesh = obj; // final signature in labs
     });
     if (planeObject) {
         const planeBox = new THREE.Box3().setFromObject(planeObject);
@@ -418,6 +447,22 @@ function animate() {
             camera.position.copy(controls.target.clone().add(toCam));
         }
         controls.update();
+    }
+
+    // Collect final signature from labs Human
+    if (playerModel && labHumanMesh) {
+        const sigs = readSignatures();
+        const uniqueId = 'labs:Human';
+        const charBox = new THREE.Box3().setFromObject(playerModel);
+        const humanBox = new THREE.Box3().setFromObject(labHumanMesh);
+        if (!sigs.has(uniqueId) && charBox.intersectsBox(humanBox)) {
+            sigs.add(uniqueId);
+            persistSignatures(sigs);
+            const count = sigs.size;
+            const reportsCounterEl = document.getElementById('reports-counter');
+            if (reportsCounterEl) reportsCounterEl.textContent = `${count}/3`;
+            console.log(`✅ Signature recorded for ${uniqueId} → ${count}/3`);
+        }
     }
 
     // Teleport back to West when touching Line211
