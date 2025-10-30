@@ -519,7 +519,7 @@ function buildLanes() {
 
 /* Inspect carcross.glb (optional) */
 loader.load(
-  '/models/carcross.glb',
+  '/models/crosscar.glb',
   (gltf) => {
     console.log('🔍 === CARCROSS.GLB OBJECT NAMES ===');
     gltf.scene.traverse((obj) => {
