@@ -825,8 +825,8 @@ function toggleCameraMode() {
             // Show character
             characterModel.visible = true;
             
-            // Position camera behind character
-            const offset = new THREE.Vector3(0, 2, 5);
+            // Position camera closer behind character (tighter third-person)
+            const offset = new THREE.Vector3(0, 1.6, 3);
             offset.applyQuaternion(characterModel.quaternion);
             camera.position.copy(characterModel.position.clone().add(offset));
             camera.lookAt(characterModel.position);
