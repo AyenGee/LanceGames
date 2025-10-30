@@ -335,11 +335,10 @@ function persistSignatures(sigSet) {
 }
 function getSignatureCount() { return readSignatures().size; }
 
-// Always reset signatures on entering/reloading west.js
+// Use persisted signatures; do not reset on load so progress is kept across west/labs
 try {
-    localStorage.removeItem(SIGN_KEY);
     const reportsCounterEl = document.getElementById('reports-counter');
-    if (reportsCounterEl) reportsCounterEl.textContent = '0/3';
+    if (reportsCounterEl) reportsCounterEl.textContent = `${getSignatureCount()}/3`;
 } catch {}
 let timeMsTotal = 180000;
 let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
