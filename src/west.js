@@ -412,7 +412,7 @@ scene.fog = new THREE.Fog(0x87CEEB, 100, 300); // Sky blue fog
 
 // Background
 const textureLoader = new THREE.TextureLoader();
-textureLoader.load('/models/sky.jpeg', (texture) => {
+textureLoader.load('models/sky.jpeg', (texture) => {
     texture.encoding = THREE.sRGBEncoding;
     scene.background = texture;
 });
@@ -436,7 +436,7 @@ const hereMarkers = [];
 const portalLabels = [];
 let officeLabelCreated = false; // Create OFFICE label once when 3 signatures are collected
 
-loader.load("/models/west.glb", (gltf) => {
+loader.load("models/west.glb", (gltf) => {
     environment = gltf.scene;
     scene.add(environment);
 
@@ -520,7 +520,7 @@ loader.load("/models/west.glb", (gltf) => {
 // ... (no changes needed) ...
 let characterControls;
 
-loader.load("/models/Soldier.glb", (gltf) => {
+loader.load("models/Soldier.glb", (gltf) => {
     const model = gltf.scene;
     model.scale.set(2, 2, 2);
     model.castShadow = true;

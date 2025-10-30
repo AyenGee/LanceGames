@@ -519,7 +519,7 @@ function buildLanes() {
 
 /* Inspect carcross.glb (optional) */
 loader.load(
-  '/models/crosscar.glb',
+  'models/crosscar.glb',
   (gltf) => {
     console.log('🔍 === CARCROSS.GLB OBJECT NAMES ===');
     gltf.scene.traverse((obj) => {
@@ -549,7 +549,7 @@ const footstepSound = new THREE.Audio(listener);
 
 /* Load Environment */
 loader.load(
-  '/models/scene.glb',
+  'models/scene.glb',
   (gltf) => {
     const env = gltf.scene;
     setShadowFlags(env);
@@ -666,7 +666,7 @@ let playerModel = null;
 let playerStart = null;
 
 loader.load(
-  '/models/Soldier.glb',
+  'models/Soldier.glb',
   (gltf) => {
     playerModel = gltf.scene;
     setShadowFlags(playerModel);
@@ -748,7 +748,7 @@ function teleportToWest() {
     overlay.style.transition = 'opacity 0.3s';
     overlay.style.opacity = '0';
     setTimeout(() => {
-      window.location.href = '/west.html';
+      window.location.href = 'west.html';
     }, 300);
   });
 

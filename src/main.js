@@ -90,8 +90,8 @@ function playIntroVideo(videoSrc, onComplete) {
 function createLoadingUI() {
     loadingOverlay = document.createElement('div'); loadingOverlay.id = 'loading-screen';
     const container = document.createElement('div'); container.className = 'loading-container';
-    const img = document.createElement('img'); img.className = 'loading-image'; img.src = '/models/main.png'; img.alt = 'Loading';
-    container.appendChild(img);
+    // const img = document.createElement('img'); img.className = 'loading-image'; img.src = 'models/main.png'; img.alt = 'Loading';
+    // container.appendChild(img);
     const progress = document.createElement('div'); progress.className = 'loading-progress';
     progressBar = document.createElement('div'); progressBar.className = 'loading-progress__bar';
     progress.appendChild(progressBar); container.appendChild(progress); loadingOverlay.appendChild(container);
@@ -175,7 +175,7 @@ let animatee = true;
 
 // Load sky texture as background
 const textureLoader = new THREE.TextureLoader(manager);
-textureLoader.load('/models/sky.jpeg', (texture) => {
+textureLoader.load('models/sky.jpeg', (texture) => {
     texture.encoding = THREE.sRGBEncoding;
     scene.background = texture;
 });
@@ -502,7 +502,7 @@ spawnPapers(); // Call after scene setup
 // === Load Environment === (Keep existing loader code)
 // ... (paste environment loader code here) ...
 const loader = new GLTFLoader(manager); let environment, obstacles = [], teleportTarget;
-loader.load("/models/Gamestates.glb", (gltf) => {
+loader.load("models/Gamestates.glb", (gltf) => {
     environment = gltf.scene; scene.add(environment);
     environment.traverse((child) => {
         if (child.isMesh) {
@@ -523,7 +523,7 @@ loader.load("/models/Gamestates.glb", (gltf) => {
 // === Load Soldier === (Keep existing loader code)
 // ... (paste soldier loader code here) ...
 let characterControls;
-loader.load("/models/Soldier.glb", (gltf) => {
+loader.load("models/Soldier.glb", (gltf) => {
     const model = gltf.scene; model.scale.set(1, 1, 1); model.position.set(0, 0.1, 3); scene.add(model);
     const mixer = new THREE.AnimationMixer(model); const animationsMap = new Map();
     gltf.animations.forEach(clip => animationsMap.set(clip.name, mixer.clipAction(clip)));
@@ -568,7 +568,7 @@ function teleportToMiniChallenge() {
 }
 function loadCarcross() { // Consider adding error handling for image load
     const overlay = document.createElement('div'); overlay.id = 'loadingCC-overlay'; overlay.className = 'loading-overlay is-visible'; // Add is-visible
-    const img = document.createElement('img'); img.id = 'loadingCC-image'; img.src = '/models/carcross.png'; img.alt = 'Carcross Loading'; overlay.appendChild(img);
+    // const img = document.createElement('img'); img.id = 'loadingCC-image'; img.src = 'models/carcross.png'; img.alt = 'Carcross Loading'; overlay.appendChild(img);
     const progressContainer = document.createElement('div'); progressContainer.id = 'loadingCC-progress-container'; progressContainer.className = 'loading-progress-container'; overlay.appendChild(progressContainer); // check CSS for this class
     const progressBar = document.createElement('div'); progressBar.id = 'loadingCC-progress-bar'; progressBar.className = 'loading-progress-bar'; progressContainer.appendChild(progressBar); // check CSS for this class
     document.body.appendChild(overlay);
@@ -581,7 +581,7 @@ function loadCarcross() { // Consider adding error handling for image load
             overlay.style.opacity = 0;
             overlay.classList.remove('is-visible'); // For CSS transitions
             setTimeout(() => overlay.remove(), 500);
-            window.location.href = "http://localhost:5173/carcross.html";
+            window.location.href = "carcross.html";
         }
     }, step);
 }

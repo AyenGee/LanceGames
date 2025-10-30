@@ -311,7 +311,7 @@ let hasTeleportedToWest = false; // prevent multiple redirects
 let line211Mesh = null; // teleporter back to west
 let labHumanMesh = null; // the NPC in labs that grants the final signature
 
-loader.load("/models/labs.glb", (gltf) => {
+loader.load("models/labs.glb", (gltf) => {
     environment = gltf.scene;
     setShadowFlags(environment);
     scene.add(environment);
@@ -386,7 +386,7 @@ function findByNameDeep(root, nameLower) {
 // === Load Character ===
 let characterControls = null;
 
-loader.load("/models/Soldier.glb", (gltf) => {
+loader.load("models/Soldier.glb", (gltf) => {
     playerModel = gltf.scene;
     setShadowFlags(playerModel);
     

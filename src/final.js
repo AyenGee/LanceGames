@@ -150,7 +150,7 @@ function updateHUD() {
 updateHUD();
 
 // Load final scene and capture Plane
-loader.load('/models/final.glb', (gltf) => {
+loader.load('models/final.glb', (gltf) => {
   const env = gltf.scene;
   env.scale.set(SCENE_SCALE, SCENE_SCALE, SCENE_SCALE);
   const meshesInFinal = [];
@@ -191,7 +191,7 @@ loader.load('/models/final.glb', (gltf) => {
 }, undefined, (err) => console.error('Failed to load final.glb', err));
 
 // Load Soldier and place on Plane top
-loader.load('/models/Soldier.glb', (gltf) => {
+loader.load('models/Soldier.glb', (gltf) => {
   playerModel = gltf.scene;
   playerModel.traverse((obj) => {
     if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
