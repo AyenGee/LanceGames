@@ -3,6 +3,9 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CharacterControls } from './characterControls.js';
 
+// Disable console.log output in production
+try { if (console && typeof console.log === 'function') console.log = () => {}; } catch {}
+
 // Scene
 const scene = new THREE.Scene();
 const SCENE_SCALE = 3; // make the scene bigger

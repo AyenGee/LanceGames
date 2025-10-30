@@ -4,6 +4,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CharacterControls } from './characterControls.js';
 
 // === MOUSE LOOK SETTINGS ===
+// Disable console.log output in production
+try { if (console && typeof console.log === 'function') console.log = () => {}; } catch {}
 let mouseSensitivity = 0.002;
 let yaw = 0;
 let pitch = 0;
@@ -271,6 +273,7 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.autoClear = false; // <-- *** ADD THIS LINE FOR MINIMAP ***
@@ -346,6 +349,7 @@ try {
 let timeMsTotal = 180000;
 let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
 let timerPaused = false;
+let persistThrottle = 0; // throttle localStorage writes to ~1/sec
 function formatTime(ms) { const totalSec = Math.max(0, Math.ceil(ms / 1000)); const m = Math.floor(totalSec / 60).toString().padStart(2, '0'); const s = (totalSec % 60).toString().padStart(2, '0'); return `${m}:${s}`; }
 
 // Update only the existing progress bar from the primary HUD
@@ -378,8 +382,8 @@ sunLight.position.set(50, 80, 40); // High up, mimicking afternoon sun
 sunLight.castShadow = true;
 
 // Configure shadow properties for realistic outdoor shadows
-sunLight.shadow.mapSize.width = 4096;  // High resolution shadows
-sunLight.shadow.mapSize.height = 4096;
+sunLight.shadow.mapSize.width = 2048;  // Reduced for performance
+sunLight.shadow.mapSize.height = 2048;
 sunLight.shadow.camera.near = 0.5;
 sunLight.shadow.camera.far = 500;
 sunLight.shadow.camera.left = -100;
@@ -617,7 +621,7 @@ function createHereMarkersForNPC(npcMesh) {
     group.position.set(center.x, topY + 1.6, center.z);
     scene.add(group);
 
-    hereMarkers.push({ group, npcMesh, yOffset: 1.6, phase: Math.random()*Math.PI*2 });
+    hereMarkers.push({ group, npcMesh, yOffset: 1.6, phase: Math.random()*Math.PI*2, center, topY });
 }
 
 // === CREATE FLOATING LABEL FOR A PORTAL MESH (e.g., "LABS") ===
@@ -686,7 +690,7 @@ function createPortalLabel(mesh, text) {
     group.position.copy(pos);
     scene.add(group);
 
-    portalLabels.push({ group, mesh, forwardOffset, yOffset });
+    portalLabels.push({ group, mesh, forwardOffset, yOffset, baseCenter: center, topY });
 }
 
 // === MESSAGE DISPLAY ===
@@ -911,11 +915,10 @@ function checkCollisions() {
 			)
 		: new THREE.Box3().setFromObject(characterModel);
     
-    // Check collision with obstacles (buildings)
-    for (const obstacle of obstacles) {
-        const currentBox = new THREE.Box3().setFromObject(obstacle.mesh);
-        
-		if (collisionBox.intersectsBox(currentBox)) {
+    // Check collision with obstacles (buildings) using cached boxes
+    for (const obstacle of obstacles) {
+        const currentBox = obstacle.box;
+        if (collisionBox.intersectsBox(currentBox)) {
             // Collision with building - revert to last valid position
             characterModel.position.copy(lastCharacterPosition);
             console.log(`⚠️ Collision with ${obstacle.name} - movement blocked`);
@@ -954,8 +957,8 @@ function checkCollisions() {
 			// Use expanded box for easier NPC detection
 			const npcDetectionBox = collisionBox.clone().expandByScalar(0.5);
         
-        for (const npc of npcs) {
-            const currentBox = new THREE.Box3().setFromObject(npc.mesh);
+        for (const npc of npcs) {
+            const currentBox = npc.box; // cached
             
             if (npcDetectionBox.intersectsBox(currentBox)) {
                 // Collision detected with NPC
@@ -1030,31 +1033,21 @@ function animate() {
     // Update HERE markers (hovering/bobbing above NPCs)
     if (hereMarkers.length) {
         for (const marker of hereMarkers) {
-            // Track NPC position and keep marker above head
-            const bbox = new THREE.Box3().setFromObject(marker.npcMesh);
-            const center = new THREE.Vector3();
-            bbox.getCenter(center);
-            const topY = bbox.max.y;
-            // Bobbing animation
+            // Bobbing animation using cached bbox data
             const bob = Math.sin(elapsed * 2.0 + marker.phase) * 0.15;
-            marker.group.position.set(center.x, topY + marker.yOffset + bob, center.z);
+            marker.group.position.set(marker.center.x, marker.topY + marker.yOffset + bob, marker.center.z);
         }
     }
 
     // Update portal labels to remain in front of their meshes and face the camera
     if (portalLabels.length) {
         for (const label of portalLabels) {
-            const bbox = new THREE.Box3().setFromObject(label.mesh);
-            const center = new THREE.Vector3();
-            bbox.getCenter(center);
-            const topY = bbox.max.y;
             const worldQuat = new THREE.Quaternion();
             label.mesh.getWorldQuaternion(worldQuat);
             const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(worldQuat).normalize();
-            const pos = center.clone().add(forward.multiplyScalar(label.forwardOffset));
-            pos.y = topY + label.yOffset;
+            const pos = label.baseCenter.clone().add(forward.multiplyScalar(label.forwardOffset));
+            pos.y = label.topY + label.yOffset;
             label.group.position.copy(pos);
-            // Make the label face the camera
             label.group.lookAt(camera.position);
         }
     }
@@ -1073,12 +1066,16 @@ function animate() {
         );
     }
 
-    // Timer update & persist
+    // Timer update & persist (throttled)
     if (!timerPaused) {
         timeMsLeft -= delta * 1000;
         if (timeMsLeft <= 0) { timeMsLeft = 0; timerPaused = true; }
         updateHUD();
-        persistTimerState(timeMsLeft, true);
+        persistThrottle += delta;
+        if (persistThrottle >= 1.0) {
+            persistTimerState(timeMsLeft, true);
+            persistThrottle = 0;
+        }
     }
 
     // When all signatures are collected, show "OFFICE" in front of glass012 once

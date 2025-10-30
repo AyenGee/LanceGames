@@ -3,6 +3,9 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CharacterControls } from './characterControls.js';
 
+// Disable console.log output in production
+try { if (console && typeof console.log === 'function') console.log = () => {}; } catch {}
+
 // === Scene Setup ===
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf0f0f0); // Light gray background
