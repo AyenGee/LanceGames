@@ -388,6 +388,7 @@ let planeObject = null;
 let characterModel = null;
 let npcs = []; // Array to store NPC collision boxes
 let obstacles = []; // Array to store building/obstacle collision boxes
+let teleporters = []; // Array to store teleporter triggers
 
 loader.load("/models/west.glb", (gltf) => {
     environment = gltf.scene;
@@ -407,7 +408,7 @@ loader.load("/models/west.glb", (gltf) => {
             console.log(`✅ Added NPC collision box for: ${child.name}`);
         }
         
-        // Store obstacles (Cube*, Cylinder*) for collision detection
+			// Store obstacles (Cube*, Cylinder*) for collision detection
         // Exclude: "Cube", "Cylinder", "Cylinder001", "Cylinder002"
         const excludedNames = ["Cube", "Cylinder", "Cylinder001", "Cylinder002","Cube001","Cube022"];
         if ((child.name.startsWith('Cube') || child.name.startsWith('Cylinder')) && 
@@ -419,6 +420,14 @@ loader.load("/models/west.glb", (gltf) => {
         } else if (excludedNames.includes(child.name)) {
             console.log(`⏭️  Skipping collision for excluded object: ${child.name}`);
         }
+
+			// Store teleporters by name
+			if (child.name === 'teleport' || child.name === 'portDoor') {
+				child.updateMatrixWorld(true);
+				const box = new THREE.Box3().setFromObject(child);
+				teleporters.push({ name: child.name, box: box, mesh: child });
+				console.log(`🌀 Added teleporter trigger for: ${child.name}`);
+			}
         
         if (child.isMesh) {
             child.castShadow = true;
@@ -438,8 +447,9 @@ loader.load("/models/west.glb", (gltf) => {
         }
     });
     console.log('🔍 === END WEST.GLB LISTING ===');
-    console.log(`✅ Found ${npcs.length} NPCs for collision detection`);
-    console.log(`✅ Found ${obstacles.length} obstacles for collision detection`);
+	console.log(`✅ Found ${npcs.length} NPCs for collision detection`);
+	console.log(`✅ Found ${obstacles.length} obstacles for collision detection`);
+	console.log(`✅ Found ${teleporters.length} teleporters`);
 });
 
 
@@ -651,14 +661,19 @@ function checkCollisions() {
         }
     }
     
-    // Get character bounding box
-    const charBox = new THREE.Box3().setFromObject(characterModel);
+	// Get collision box (character in third-person, camera proxy in first-person)
+	const collisionBox = isFirstPerson
+		? new THREE.Box3().setFromCenterAndSize(
+				camera.position.clone(),
+				new THREE.Vector3(0.6, 1.8, 0.6)
+			)
+		: new THREE.Box3().setFromObject(characterModel);
     
     // Check collision with obstacles (buildings)
     for (const obstacle of obstacles) {
         const currentBox = new THREE.Box3().setFromObject(obstacle.mesh);
         
-        if (charBox.intersectsBox(currentBox)) {
+		if (collisionBox.intersectsBox(currentBox)) {
             // Collision with building - revert to last valid position
             characterModel.position.copy(lastCharacterPosition);
             console.log(`⚠️ Collision with ${obstacle.name} - movement blocked`);
@@ -666,10 +681,22 @@ function checkCollisions() {
         }
     }
     
+		// Check collision with teleporters
+		for (const tp of teleporters) {
+			const tpBox = new THREE.Box3().setFromObject(tp.mesh);
+			if (collisionBox.intersectsBox(tpBox)) {
+				console.log(`🌀 Teleport trigger: ${tp.name} → labs.html`);
+				// Persist current timer state before navigating
+				persistTimerState(timeMsLeft, false);
+				window.location.href = 'labs.html';
+				return;
+			}
+		}
+
     // Check collision with NPCs (only if not colliding with obstacles)
     if (npcs.length > 0) {
-        // Use expanded box for easier NPC detection
-        const npcDetectionBox = charBox.clone().expandByScalar(0.5);
+			// Use expanded box for easier NPC detection
+			const npcDetectionBox = collisionBox.clone().expandByScalar(0.5);
         
         for (const npc of npcs) {
             const currentBox = new THREE.Box3().setFromObject(npc.mesh);
@@ -691,7 +718,7 @@ function checkCollisions() {
     
     // Reset last collision NPC if no NPC collision detected
     if (lastCollisionNPC) {
-        const npcDetectionBox = charBox.clone().expandByScalar(0.5);
+		const npcDetectionBox = collisionBox.clone().expandByScalar(0.5);
         let stillColliding = false;
         for (const npc of npcs) {
             const currentBox = new THREE.Box3().setFromObject(npc.mesh);

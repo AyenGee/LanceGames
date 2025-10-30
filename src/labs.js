@@ -267,6 +267,8 @@ let environment;
 let playerModel = null;
 let playerStart = null;
 let planeObject = null; // Floor named Plane004
+let hasTeleportedToWest = false; // prevent multiple redirects
+let line211Mesh = null; // teleporter back to west
 
 loader.load("/models/labs.glb", (gltf) => {
     environment = gltf.scene;
@@ -286,6 +288,8 @@ loader.load("/models/labs.glb", (gltf) => {
     planeObject = null;
     environment.traverse((obj) => {
         if (obj.name === 'Plane004') planeObject = obj;
+        // Find teleporter back to west; adjust name if needed in the model
+        if (obj.name === 'Line211') line211Mesh = obj;
     });
     if (planeObject) {
         const planeBox = new THREE.Box3().setFromObject(planeObject);
@@ -423,6 +427,8 @@ function animate() {
         if (charBox.intersectsBox(lineBox)) {
             hasTeleportedToWest = true;
             console.log('🚪 Touching Line211 → teleporting to west.html');
+            // Persist current timer state before navigating
+            persistTimerState(timeMsLeft, false);
             window.location.href = 'west.html';
             return;
         }
