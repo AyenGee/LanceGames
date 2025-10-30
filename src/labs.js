@@ -170,9 +170,20 @@ accentLight2.position.set(8, 3, 0);
 scene.add(accentLight2);
 
 // 5. Hemisphere light for subtle environmental lighting
-const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
+const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 4.0);
 hemisphereLight.position.set(0, 10, 0);
 scene.add(hemisphereLight);
+
+// 6. Soft fill lights to gently brighten darker areas
+const softFillDir = new THREE.DirectionalLight(0xfff2cc, 0.25);
+softFillDir.position.set(-6, 6, 4);
+softFillDir.castShadow = false;
+scene.add(softFillDir);
+
+const softFillPoint = new THREE.PointLight(0xffffff, 0.3, 100);
+softFillPoint.position.set(0, 4, 0);
+softFillPoint.castShadow = false;
+scene.add(softFillPoint);
 
 // === Helper Functions ===
 function setShadowFlags(object3d) {
