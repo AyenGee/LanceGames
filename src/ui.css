@@ -34,7 +34,7 @@
   margin-bottom: 16px;
   line-height: 1.5;
 }
-#start-overlay .start-btn {
+#start-overlay .start-btn{
   cursor: pointer;
   padding: 10px 18px;
   font-size: 16px;
@@ -164,6 +164,21 @@
   height: 25px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
+.btn-ctrl {
+  background: linear-gradient(145deg, #240038, #d452ee, #c330d6);
+  box-shadow: 0 8px 25px rgba(128, 0, 128, 0.4), inset 0 1px 0 rgba(128, 0, 128, 0.2);
+  opacity: 0.1;
+}
+.btn-ctrl:hover { opacity: 1; transform: translateY(-3px) scale(1.05); box-shadow: 0 12px 35px rgba(128, 0, 128, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+
+.btn-rst .restart-btn {
+background: linear-gradient(145deg, #040038, #526fee, #3330d6);
+box-shadow: 0 8px 25px rgba(0, 0, 128, 0.4), inset 0 1px 0 rgba(0, 0, 128, 0.2);
+opacity: 0.1 
+}
+
+.btn-rst:hover { opacity: 1; transform: translateY(-3px) scale(1.05); box-shadow: 0 12px 35px rgba(0, 0, 255, 0.6), inset 0 1px 0 rgba(0, 0, 255, 0.3); }
+
 .btn--pause {
   background: linear-gradient(145deg, #ff6b6b, #ee5a52, #d63031);
   box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -185,49 +200,18 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.9);
+  background-color: rgba(0, 0, 0, 1);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  color: white;
+  color: red;
   font-family: sans-serif;
   z-index: 9999;
 }
 .timesup-overlay h1 { margin-bottom: 20px; }
 .restart-btn {
-  padding: 10px 20px;
+  padding:5px 20px;
   font-size: 16px;
   cursor: pointer;
 }
-
-/* style.css or <style> in index.html */
-#minimap {
-    position: absolute;
-    top: 20px;
-    left: 20px; /* Position top-left */
-    width: 200px; /* Map size in pixels */
-    height: 200px;
-    background-image: url('/path/to/your/level-layout.png'); /* <<< CHANGE THIS PATH */
-    background-size: cover;
-    border: 2px solid #555;
-    border-radius: 4px;
-    overflow: hidden; /* Clip icons outside map */
-    z-index: 1000; /* Ensure it's above the canvas */
-    pointer-events: none; /* Make it non-interactive */
-}
-
-#player-icon {
-    position: absolute;
-    /* Triangle pointing up */
-    width: 0;
-    height: 0;
-    background-color: transparent;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 12px solid #00ff00; /* Green triangle */
-    
-    /* We set top/left/transform via JS */
-}
-
-/* Add styles for #enemy-icon if needed */

@@ -643,11 +643,13 @@ document.addEventListener("keydown", (e) => {
 // ... (paste showTimesUp and restart functions here) ...
 function showTimesUp() {
     const overlay = document.createElement('div'); overlay.className = 'timesup-overlay'; // Ensure this class is styled
-    const msg = document.createElement('h1'); msg.textContent = 'Times Up!'; overlay.appendChild(msg);
+    const msg = document.createElement('h1'); msg.textContent = 'Mission Failed: You Ran Out Of Time!'; overlay.appendChild(msg);
     restart(overlay); document.body.appendChild(overlay);
 }
 function restart(attachment) {
-    const btn = document.createElement('button'); btn.className = 'restart-btn'; // Ensure this class is styled
+    const btn = document.createElement('button'); btn.className = 'btn restart-btn'; // Ensure this class is styled
     btn.textContent = 'Restart'; btn.onclick = () => location.reload(); attachment.appendChild(btn);
 }
 //----------------------------------
+
+export default setupHUD;
