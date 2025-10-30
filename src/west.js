@@ -425,6 +425,7 @@ let hasTeleportedToFinal = false; // Guard for final teleport
 const hereMarkers = [];
 // Floating labels for portals (e.g., LABS in front of portDoor)
 const portalLabels = [];
+let officeLabelCreated = false; // Create OFFICE label once when 3 signatures are collected
 
 loader.load("/models/west.glb", (gltf) => {
     environment = gltf.scene;
@@ -1078,6 +1079,12 @@ function animate() {
         if (timeMsLeft <= 0) { timeMsLeft = 0; timerPaused = true; }
         updateHUD();
         persistTimerState(timeMsLeft, true);
+    }
+
+    // When all signatures are collected, show "OFFICE" in front of glass012 once
+    if (!officeLabelCreated && glass012Mesh && getSignatureCount() === 3) {
+        createPortalLabel(glass012Mesh, 'OFFICE');
+        officeLabelCreated = true;
     }
 
     // --- 2. RENDER MAIN SCENE ---
