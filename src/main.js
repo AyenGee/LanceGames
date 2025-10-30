@@ -6,6 +6,8 @@ import { CharacterControls } from './characterControls.js';
 // === Scene Setup ===
 const scene = new THREE.Scene();
 let gameStarted = false;
+const listener = new THREE.AudioListener();
+//const audioLoader = new THREE.AudioLoader(manager);
 
 // === LOADING SCREEN (CSS-driven) ===
 let loadingOverlay;
@@ -174,12 +176,28 @@ textureLoader.load('/models/sky.jpeg', (texture) => {
     texture.encoding = THREE.sRGBEncoding;
     scene.background = texture;
 });
-
+const audioLoader = new THREE.AudioLoader();
+const backgroundMusic = new THREE.Audio(listener);
+audioLoader.load('assets/ES_Superhero Story 1 - Fredrik Ekstrom.mp3', function(buffer) {
+    backgroundMusic.setBuffer(buffer);
+    backgroundMusic.setLoop(true);
+    backgroundMusic.setVolume(0.3); // Set a lower volume for BGM
+    backgroundMusic.play(); // <-- Play it as soon as it's loaded
+});
 // Camera
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 2, 5);
-
+camera.add(listener);
+const footstepSound = new THREE.Audio(listener);
 // Renderer
+
+audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', function(buffer) {
+    footstepSound.setBuffer(buffer);
+    footstepSound.setLoop(true);
+    footstepSound.setVolume(0.5);
+    // Note: Do not play() here, the controls class will do it.
+});
+
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.autoClear = false; // <-- Set autoClear to false HERE
@@ -480,7 +498,7 @@ loader.load("/models/Soldier.glb", (gltf) => {
     const model = gltf.scene; model.scale.set(1, 1, 1); model.position.set(0, 0.1, 3); scene.add(model);
     const mixer = new THREE.AnimationMixer(model); const animationsMap = new Map();
     gltf.animations.forEach(clip => animationsMap.set(clip.name, mixer.clipAction(clip)));
-    characterControls = new CharacterControls(model, mixer, animationsMap, orbitControls, camera, "Idle");
+    characterControls = new CharacterControls(model, mixer, animationsMap, orbitControls, camera, "Idle",footstepSound);
     // Set initial map camera position after player loads if needed
     // mapCamera.position.set(model.position.x, 100, model.position.z);
     // mapCamera.lookAt(model.position.x, 0, model.position.z);
