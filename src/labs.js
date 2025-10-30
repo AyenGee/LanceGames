@@ -23,6 +23,106 @@ camera.lookAt(0, 0, 0);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
+controls.enablePan = false;
+controls.minDistance = 1.2; // keep camera close indoors
+controls.maxDistance = 1.8;
+controls.zoomSpeed = 0.5;
+controls.maxPolarAngle = Math.PI / 2 - 0.05; // avoid going below ground
+
+// === First-Person Controls (like west.js/main.js) ===
+let mouseSensitivity = 0.002;
+let yaw = 0;
+let pitch = 0;
+let isFirstPerson = false;
+const CAMERA_TOGGLE_KEY = 'v';
+const moveSpeed = 5.0;
+
+// Request pointer lock only in first-person mode
+document.body.addEventListener('click', () => {
+    if (isFirstPerson && document.pointerLockElement !== renderer.domElement) {
+        try { renderer.domElement.requestPointerLock(); } catch (e) { console.warn('Pointer lock request failed:', e); }
+    }
+});
+
+// Keep OrbitControls disabled during FPS + pointer lock
+document.addEventListener('pointerlockchange', () => {
+    const locked = document.pointerLockElement === renderer.domElement;
+    controls.enabled = !isFirstPerson && !locked;
+});
+
+// Mouse look for FPS
+document.addEventListener('mousemove', (e) => {
+    if (isFirstPerson && document.pointerLockElement === renderer.domElement) {
+        yaw -= e.movementX * mouseSensitivity;
+        pitch -= e.movementY * mouseSensitivity;
+        pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitch));
+    }
+});
+
+function updateFirstPersonCamera(delta) {
+    if (!isFirstPerson) return;
+    const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+    const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
+    const finalQuat = new THREE.Quaternion();
+    finalQuat.multiplyQuaternions(qYaw, qPitch);
+    camera.quaternion.copy(finalQuat);
+
+    const moveVector = new THREE.Vector3();
+    if (keysPressed['w']) moveVector.z -= 1;
+    if (keysPressed['s']) moveVector.z += 1;
+    if (keysPressed['a']) moveVector.x -= 1;
+    if (keysPressed['d']) moveVector.x += 1;
+    if (moveVector.length() > 0) {
+        moveVector.normalize();
+        const moveQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+        moveVector.applyQuaternion(moveQuat);
+        moveVector.multiplyScalar(moveSpeed * delta);
+        camera.position.add(moveVector);
+    }
+}
+
+function toggleCameraMode() {
+    isFirstPerson = !isFirstPerson;
+    if (isFirstPerson) {
+        if (playerModel) {
+            const charPos = new THREE.Vector3();
+            playerModel.getWorldPosition(charPos);
+            camera.position.copy(charPos);
+            // Base head height on floor to avoid accumulated Y drift
+            const planeY = planeObject ? new THREE.Box3().setFromObject(planeObject).max.y : charPos.y;
+            camera.position.y = planeY + 1.5;
+            yaw = playerModel.rotation.y;
+            pitch = 0;
+            playerModel.visible = false;
+        } else {
+            const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+            yaw = euler.y; pitch = 0;
+        }
+        controls.enabled = false;
+        try { renderer.domElement.requestPointerLock(); } catch {}
+        console.log('Switched to first-person view (labs)');
+    } else {
+        if (playerModel) {
+            // Snap player to floor on exit, copying X/Z from camera, and fixing Y to plane top
+            const planeY = planeObject ? new THREE.Box3().setFromObject(planeObject).max.y : playerModel.position.y;
+            playerModel.position.set(camera.position.x, planeY, camera.position.z);
+            playerModel.rotation.y = yaw;
+            playerModel.visible = true;
+            // Place camera close behind character for indoor scene
+            const offset = new THREE.Vector3(0, 1.5, 1.6);
+            offset.applyQuaternion(playerModel.quaternion);
+            camera.position.copy(playerModel.position.clone().add(offset));
+            camera.lookAt(playerModel.position);
+            // Log heights when exiting FPS
+            console.log(`📏 Heights (exit FPS) → Soldier Y=${playerModel.position.y.toFixed(2)} | Plane004 Y=${planeY !== null ? planeY.toFixed(2) : 'n/a'}`);
+        }
+        if (document.pointerLockElement === renderer.domElement) {
+            try { document.exitPointerLock(); } catch {}
+        }
+        controls.enabled = true;
+        console.log('Switched to third-person view (labs)');
+    }
+}
 
 // === Lighting for Indoor Lab Environment ===
 // 1. Ambient light (base illumination)
@@ -113,6 +213,9 @@ loader.load("/models/labs.glb", (gltf) => {
     if (planeObject) {
         const planeBox = new THREE.Box3().setFromObject(planeObject);
         console.log(`✅ Plane004 found. Y max=${planeBox.max.y.toFixed(2)}`);
+        if (playerModel) {
+            console.log(`📏 Heights → Soldier Y=${playerModel.position.y.toFixed(2)} | Plane004 Y=${planeBox.max.y.toFixed(2)}`);
+        }
     } else {
         console.warn('⚠️ Plane004 not found in labs.glb');
     }
@@ -173,6 +276,9 @@ loader.load("/models/Soldier.glb", (gltf) => {
     if (planeObject) {
         const planeBox = new THREE.Box3().setFromObject(planeObject);
         playerModel.position.y = planeBox.max.y;
+        console.log(`📏 Heights (on load) → Soldier Y=${playerModel.position.y.toFixed(2)} | Plane004 Y=${planeBox.max.y.toFixed(2)}`);
+    } else {
+        console.log(`📏 Heights (on load) → Soldier Y=${playerModel.position.y.toFixed(2)} | Plane004 Y=n/a`);
     }
     
     scene.add(playerModel);
@@ -202,6 +308,11 @@ document.addEventListener('keyup', (e) => {
     keysPressed[e.key.toLowerCase()] = false;
 });
 
+// Camera toggle key (V)
+document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === CAMERA_TOGGLE_KEY) toggleCameraMode();
+});
+
 // === Animate ===
 const clock = new THREE.Clock();
 function animate() {
@@ -209,11 +320,24 @@ function animate() {
     
     const dt = clock.getDelta();
     
-    if (characterControls) {
-        characterControls.update(dt, keysPressed);
+    if (isFirstPerson) {
+        updateFirstPersonCamera(dt);
+    } else {
+        if (characterControls) {
+            characterControls.update(dt, keysPressed);
+        }
+        // Keep camera close to character indoors
+        if (playerModel) {
+            const target = playerModel.position.clone().add(new THREE.Vector3(0, 1.5, 0));
+            controls.target.copy(target);
+            const desiredDistance = 1.6;
+            const toCam = camera.position.clone().sub(controls.target);
+            if (toCam.lengthSq() === 0) toCam.set(0, 0, desiredDistance);
+            toCam.setLength(desiredDistance);
+            camera.position.copy(controls.target.clone().add(toCam));
+        }
+        controls.update();
     }
-    
-    controls.update();
     renderer.render(scene, camera);
 }
 
