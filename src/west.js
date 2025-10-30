@@ -421,6 +421,10 @@ let obstacles = []; // Array to store building/obstacle collision boxes
 let teleporters = []; // Array to store teleporter triggers
 let glass012Mesh = null; // Exit trigger to final.html
 let hasTeleportedToFinal = false; // Guard for final teleport
+// HERE markers (hovering letters + light) for signable NPCs
+const hereMarkers = [];
+// Floating labels for portals (e.g., LABS in front of portDoor)
+const portalLabels = [];
 
 loader.load("/models/west.glb", (gltf) => {
     environment = gltf.scene;
@@ -432,12 +436,17 @@ loader.load("/models/west.glb", (gltf) => {
         console.log(`Name: "${child.name}" | Type: ${child.type}${child.isMesh ? ' (Mesh)' : ''}`);
         
         // Store NPCs for collision detection
-        const npcNames = ["Human", "Human_1", "Human_2", "Low_Poly_Human", "Renzo"];
+        const npcNames = ["Human", "Human_1", "Human_2", "Low_Poly_Human", "Renzo"];
         if (npcNames.includes(child.name)) {
             child.updateMatrixWorld(true);
             const box = new THREE.Box3().setFromObject(child);
             npcs.push({ name: child.name, box: box, mesh: child });
             console.log(`✅ Added NPC collision box for: ${child.name}`);
+
+            // If this NPC grants a signature, create hovering HERE markers
+            if (signableWest.has(child.name)) {
+                createHereMarkersForNPC(child);
+            }
         }
         
 			// Store obstacles (Cube*, Cylinder*) for collision detection
@@ -459,6 +468,9 @@ loader.load("/models/west.glb", (gltf) => {
 				const box = new THREE.Box3().setFromObject(child);
 				teleporters.push({ name: child.name, box: box, mesh: child });
 				console.log(`🌀 Added teleporter trigger for: ${child.name}`);
+				if (child.name === 'portDoor') {
+					createPortalLabel(child, 'LABS');
+				}
 			}
 
 			// Final exit trigger (glass012)
@@ -534,6 +546,146 @@ function positionCharacterOnPlane() {
         
         console.log(`✅ Character positioned on Plane at y=${yPosition.toFixed(2)}`);
     }
+}
+
+// === CREATE HOVERING "HERE" MARKERS FOR SIGNABLE NPCs ===
+function createHereMarkersForNPC(npcMesh) {
+    // Compute head/top position to place markers above
+    const bbox = new THREE.Box3().setFromObject(npcMesh);
+    const topY = bbox.max.y;
+
+    const group = new THREE.Group();
+    group.renderOrder = 10;
+
+    // Helper to build a glowing letter sprite
+    function makeLetterSprite(letter, color) {
+        const size = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return new THREE.Sprite();
+
+        // Glow background
+        const gradient = ctx.createRadialGradient(size/2, size/2, 10, size/2, size/2, size/2);
+        gradient.addColorStop(0, 'rgba(255,255,255,0.95)');
+        gradient.addColorStop(0.2, 'rgba(255,255,255,0.35)');
+        gradient.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0,0,size,size);
+
+        // Letter
+        ctx.font = 'bold 180px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 30;
+        ctx.fillText(letter, size/2, size/2 + 10);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.encoding = THREE.sRGBEncoding;
+        const material = new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+        const sprite = new THREE.Sprite(material);
+        sprite.scale.set(0.8, 0.8, 0.8);
+        return sprite;
+    }
+
+    const letters = ['H','E','R','E'];
+    const color = '#66ccff';
+    const spacing = 0.7;
+    const totalWidth = spacing * (letters.length - 1);
+    letters.forEach((ch, i) => {
+        const s = makeLetterSprite(ch, color);
+        s.position.set(-totalWidth/2 + i*spacing, 0, 0);
+        group.add(s);
+    });
+
+    // Add a small point light to act as a light source hint
+    const light = new THREE.PointLight(0x66ccff, 0.8, 6, 2.0);
+    light.position.set(0, 0, 0);
+    group.add(light);
+
+    // Initial placement: centered above NPC
+    const center = new THREE.Vector3();
+    bbox.getCenter(center);
+    group.position.set(center.x, topY + 1.6, center.z);
+    scene.add(group);
+
+    hereMarkers.push({ group, npcMesh, yOffset: 1.6, phase: Math.random()*Math.PI*2 });
+}
+
+// === CREATE FLOATING LABEL FOR A PORTAL MESH (e.g., "LABS") ===
+function createPortalLabel(mesh, text) {
+    // Build a glowing text sprite
+    function makeTextSprite(t, color) {
+        const width = 512, height = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return new THREE.Sprite();
+
+        // Background glow
+        const gradient = ctx.createRadialGradient(width/2, height/2, 20, width/2, height/2, Math.max(width,height)/2);
+        gradient.addColorStop(0, 'rgba(255,255,255,0.6)');
+        gradient.addColorStop(0.3, 'rgba(255,255,255,0.25)');
+        gradient.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0,0,width,height);
+
+        // Text
+        ctx.font = 'bold 160px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 40;
+        ctx.fillText(t, width/2, height/2 + 10);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.encoding = THREE.sRGBEncoding;
+        const material = new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+        const sprite = new THREE.Sprite(material);
+        sprite.scale.set(2.2, 1.1, 1.0);
+        return sprite;
+    }
+
+    const color = '#ffcc66';
+    const sprite = makeTextSprite(text, color);
+    const group = new THREE.Group();
+    group.add(sprite);
+
+    // Light for emphasis
+    const light = new THREE.PointLight(0xffcc66, 0.7, 6, 2.0);
+    group.add(light);
+
+    // Initial placement: in front of mesh and slightly above top
+    const bbox = new THREE.Box3().setFromObject(mesh);
+    const center = new THREE.Vector3();
+    bbox.getCenter(center);
+    const topY = bbox.max.y;
+
+    const worldQuat = new THREE.Quaternion();
+    mesh.getWorldQuaternion(worldQuat);
+    // Use +Z as forward reference in mesh local space
+    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(worldQuat).normalize();
+    const forwardOffset = 1.5;
+    const yOffset = 1.2;
+    const pos = center.clone().add(forward.multiplyScalar(forwardOffset));
+    pos.y = topY + yOffset;
+    group.position.copy(pos);
+    scene.add(group);
+
+    portalLabels.push({ group, mesh, forwardOffset, yOffset });
 }
 
 // === MESSAGE DISPLAY ===
@@ -857,6 +1009,7 @@ function checkCollisions() {
 function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
+    const elapsed = clock.getElapsedTime();
 
     // --- 1. UPDATE LOGIC ---
     if (isFirstPerson) {
@@ -873,6 +1026,38 @@ function animate() {
     // Check for NPC collisions (this may revert character position)
     checkCollisions();
     
+    // Update HERE markers (hovering/bobbing above NPCs)
+    if (hereMarkers.length) {
+        for (const marker of hereMarkers) {
+            // Track NPC position and keep marker above head
+            const bbox = new THREE.Box3().setFromObject(marker.npcMesh);
+            const center = new THREE.Vector3();
+            bbox.getCenter(center);
+            const topY = bbox.max.y;
+            // Bobbing animation
+            const bob = Math.sin(elapsed * 2.0 + marker.phase) * 0.15;
+            marker.group.position.set(center.x, topY + marker.yOffset + bob, center.z);
+        }
+    }
+
+    // Update portal labels to remain in front of their meshes and face the camera
+    if (portalLabels.length) {
+        for (const label of portalLabels) {
+            const bbox = new THREE.Box3().setFromObject(label.mesh);
+            const center = new THREE.Vector3();
+            bbox.getCenter(center);
+            const topY = bbox.max.y;
+            const worldQuat = new THREE.Quaternion();
+            label.mesh.getWorldQuaternion(worldQuat);
+            const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(worldQuat).normalize();
+            const pos = center.clone().add(forward.multiplyScalar(label.forwardOffset));
+            pos.y = topY + label.yOffset;
+            label.group.position.copy(pos);
+            // Make the label face the camera
+            label.group.lookAt(camera.position);
+        }
+    }
+
     // --- ADD MAP CAMERA UPDATE (AFTER COLLISIONS) ---
     if (characterModel) {
         mapCamera.position.set(
