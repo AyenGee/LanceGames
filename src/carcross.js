@@ -186,11 +186,6 @@ controlsPanel.innerHTML = `
   </ul>
 `;
 
-// Text fallback line (optional)
-const hudText = document.createElement('div');
-hudText.className = 'hud-text';
-hudText.style.opacity = '0.85';
-
 // Build HUD
 hud.appendChild(progressContainer);
 hud.appendChild(mainContentRow);
