@@ -407,6 +407,8 @@ let characterModel = null;
 let npcs = []; // Array to store NPC collision boxes
 let obstacles = []; // Array to store building/obstacle collision boxes
 let teleporters = []; // Array to store teleporter triggers
+let glass012Mesh = null; // Exit trigger to final.html
+let hasTeleportedToFinal = false; // Guard for final teleport
 
 loader.load("/models/west.glb", (gltf) => {
     environment = gltf.scene;
@@ -445,6 +447,12 @@ loader.load("/models/west.glb", (gltf) => {
 				const box = new THREE.Box3().setFromObject(child);
 				teleporters.push({ name: child.name, box: box, mesh: child });
 				console.log(`🌀 Added teleporter trigger for: ${child.name}`);
+			}
+
+			// Final exit trigger (glass012)
+			if (child.name === 'glass012') {
+				glass012Mesh = child;
+				console.log('🚪 Registered final exit trigger: glass012');
 			}
         
         if (child.isMesh) {
@@ -550,6 +558,55 @@ function showMessage(text) {
         msg.style.transition = 'opacity 0.5s';
         setTimeout(() => msg.remove(), 500);
     }, 2000);
+}
+
+// === OVERLAY MESSAGE (Final transition) ===
+function showCongratsOverlay(text) {
+	const existing = document.getElementById('congrats-overlay');
+	if (existing) existing.remove();
+	const overlay = document.createElement('div');
+	overlay.id = 'congrats-overlay';
+	overlay.style.position = 'fixed';
+	overlay.style.inset = '0';
+	overlay.style.background = 'rgba(0,0,0,0.75)';
+	overlay.style.display = 'flex';
+	overlay.style.alignItems = 'center';
+	overlay.style.justifyContent = 'center';
+	overlay.style.zIndex = '10001';
+
+	const card = document.createElement('div');
+	card.style.maxWidth = '720px';
+	card.style.margin = '20px';
+	card.style.background = 'linear-gradient(135deg, rgba(20,20,20,0.95), rgba(35,35,35,0.95))';
+	card.style.color = '#fff';
+	card.style.padding = '28px 32px';
+	card.style.borderRadius = '14px';
+	card.style.boxShadow = '0 20px 60px rgba(0,0,0,0.6)';
+	card.style.fontFamily = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+
+	const title = document.createElement('div');
+	title.textContent = 'Great!';
+	title.style.fontSize = '28px';
+	title.style.fontWeight = '800';
+	title.style.marginBottom = '10px';
+
+	const body = document.createElement('div');
+	body.style.fontSize = '16px';
+	body.style.lineHeight = '1.7';
+	body.style.opacity = '0.95';
+	body.textContent = text;
+
+	const hint = document.createElement('div');
+	hint.textContent = 'Teleporting to the maze...';
+	hint.style.marginTop = '16px';
+	hint.style.opacity = '0.8';
+	hint.style.fontSize = '14px';
+
+	card.appendChild(title);
+	card.appendChild(body);
+	card.appendChild(hint);
+	overlay.appendChild(card);
+	document.body.appendChild(overlay);
 }
 
 // === TOGGLE CAMERA MODE ===
@@ -701,6 +758,20 @@ function checkCollisions() {
         }
     }
     
+	// Final exit: if all signatures collected, touching glass012 triggers overlay and teleport to final.html
+	if (!hasTeleportedToFinal && glass012Mesh && getSignatureCount() === 3) {
+		const glassBox = new THREE.Box3().setFromObject(glass012Mesh);
+		if (collisionBox.intersectsBox(glassBox)) {
+			hasTeleportedToFinal = true;
+			showCongratsOverlay(
+				'Great. you have all the reports and signatures.  recently Robin has been pissed at you students so he created a maze system such that it is a little harder for all of you to find his office. ALL THE BEST FINDING IT IN TIME!!.'
+			);
+			persistTimerState(timeMsLeft, false);
+			setTimeout(() => { window.location.href = 'final.html'; }, 2500);
+			return;
+		}
+	}
+
 		// Check collision with teleporters
 		for (const tp of teleporters) {
 			const tpBox = new THREE.Box3().setFromObject(tp.mesh);
