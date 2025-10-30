@@ -51,7 +51,7 @@ const reportsContainer = document.createElement('div');
 reportsContainer.className = 'reports-container';
 const reportsLabel = document.createElement('div');
 reportsLabel.className = 'reports-label';
-reportsLabel.textContent = 'REPORTS:';
+reportsLabel.textContent = 'SIGNATURES:';
 const reportsCounter = document.createElement('div');
 reportsCounter.id = 'reports-counter';
 reportsCounter.className = 'reports-counter';
@@ -331,6 +331,18 @@ function persistSignatures(sigSet) {
     try { localStorage.setItem(SIGN_KEY, JSON.stringify(Array.from(sigSet))); } catch {}
 }
 function getSignatureCount() { return readSignatures().size; }
+
+// Reset signatures on first arrival to west.js per browser session
+const WEST_INIT_FLAG = 'westInitDone';
+try {
+    if (sessionStorage.getItem(WEST_INIT_FLAG) !== '1') {
+        localStorage.removeItem(SIGN_KEY);
+        sessionStorage.setItem(WEST_INIT_FLAG, '1');
+        const reportsCounterEl = document.getElementById('reports-counter');
+        if (reportsCounterEl) reportsCounterEl.textContent = '0/3';
+        console.log('🔁 west.js first-time init: signatures reset to 0');
+    }
+} catch {}
 let timeMsTotal = 180000;
 let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
 let timerPaused = false;
@@ -721,7 +733,7 @@ function updateFirstPersonCamera(delta) {
 let lastCollisionNPC = null; // Track last NPC to prevent spam
 let lastCharacterPosition = new THREE.Vector3();
 const pageId = 'west';
-const signableWest = new Set(['Renzo','Human']); // two signatures in west: Renzo and Human
+const signableWest = new Set(['Renzo','Human','Low_Poly_Human']); // include Renzo alias name
 
 function checkCollisions() {
 // ... (no changes needed) ...
