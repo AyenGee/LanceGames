@@ -335,16 +335,11 @@ function persistSignatures(sigSet) {
 }
 function getSignatureCount() { return readSignatures().size; }
 
-// Reset signatures on first arrival to west.js per browser session
-const WEST_INIT_FLAG = 'westInitDone';
+// Always reset signatures on entering/reloading west.js
 try {
-    if (sessionStorage.getItem(WEST_INIT_FLAG) !== '1') {
-        localStorage.removeItem(SIGN_KEY);
-        sessionStorage.setItem(WEST_INIT_FLAG, '1');
-        const reportsCounterEl = document.getElementById('reports-counter');
-        if (reportsCounterEl) reportsCounterEl.textContent = '0/3';
-        console.log('🔁 west.js first-time init: signatures reset to 0');
-    }
+    localStorage.removeItem(SIGN_KEY);
+    const reportsCounterEl = document.getElementById('reports-counter');
+    if (reportsCounterEl) reportsCounterEl.textContent = '0/3';
 } catch {}
 let timeMsTotal = 180000;
 let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
@@ -420,6 +415,7 @@ const loader = new GLTFLoader();
 let environment;
 let planeObject = null;
 let characterModel = null;
+let environmentLoaded = false; // ensure scene appears before character
 let npcs = []; // Array to store NPC collision boxes
 let obstacles = []; // Array to store building/obstacle collision boxes
 let teleporters = []; // Array to store teleporter triggers
@@ -501,10 +497,13 @@ loader.load("/models/west.glb", (gltf) => {
             }
         }
     });
-    console.log('🔍 === END WEST.GLB LISTING ===');
-	console.log(`✅ Found ${npcs.length} NPCs for collision detection`);
-	console.log(`✅ Found ${obstacles.length} obstacles for collision detection`);
-	console.log(`✅ Found ${teleporters.length} teleporters`);
+    console.log('🔍 === END WEST.GLB LISTING ===');
+    console.log(`✅ Found ${npcs.length} NPCs for collision detection`);
+    console.log(`✅ Found ${obstacles.length} obstacles for collision detection`);
+    console.log(`✅ Found ${teleporters.length} teleporters`);
+    // Mark environment as loaded and reveal character if already loaded
+    environmentLoaded = true;
+    if (characterModel) characterModel.visible = true;
 });
 
 
@@ -516,12 +515,14 @@ loader.load("/models/Soldier.glb", (gltf) => {
     const model = gltf.scene;
     model.scale.set(2, 2, 2);
     model.castShadow = true;
+    // Keep soldier hidden until environment is ready
+    model.visible = environmentLoaded;
     scene.add(model);
 
     characterModel = model;
 
-    if (planeObject) positionCharacterOnPlane();
-    else model.position.set(0, 2, 3);
+    if (planeObject) positionCharacterOnPlane();
+    else model.position.set(0, 2, 3);
     
     // Initialize last character position for collision detection
     lastCharacterPosition.copy(model.position);
