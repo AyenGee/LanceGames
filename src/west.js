@@ -113,11 +113,6 @@ let planeObject = null;
 let characterModel = null;
 let npcs = []; // Array to store NPC collision boxes
 let obstacles = []; // Array to store building/obstacle collision boxes
-let playerStart = null; // Computed spawn near Line211
-let playerStartYaw = null; // Facing direction when spawning near Line211
-let needSpawnAtLine211 = false; // Flag if soldier loaded before Line211 was found
-let line211Mesh = null; // Reference to Line211 object for teleport trigger
-let hasTeleportedToLabs = false; // Ensure single teleport
 
 loader.load("/models/west.glb", (gltf) => {
     environment = gltf.scene;
@@ -127,40 +122,7 @@ loader.load("/models/west.glb", (gltf) => {
     console.log('🔍 === WEST.GLB OBJECT NAMES ===');
     environment.traverse((child) => {
         console.log(`Name: "${child.name}" | Type: ${child.type}${child.isMesh ? ' (Mesh)' : ''}`);
-        // Compute spawn near Line211 regardless of type (Mesh or Group)
-        if (child.name === 'Line211') {
-            child.updateMatrixWorld(true);
-            const spawnBox = new THREE.Box3().setFromObject(child);
-            const center = new THREE.Vector3();
-            spawnBox.getCenter(center);
-            let y = spawnBox.max.y;
-            if (planeObject) {
-                const planeBox = new THREE.Box3().setFromObject(planeObject);
-                y = planeBox.max.y;
-            }
-            const lineQuat = new THREE.Quaternion();
-            child.getWorldQuaternion(lineQuat);
-            const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(lineQuat);
-            forward.y = 0;
-            if (forward.lengthSq() === 0) forward.set(0, 0, 1);
-            forward.normalize();
-            const spawnDistance = 2.0;
-            const worldPos = center.clone().add(forward.clone().multiplyScalar(spawnDistance));
-            playerStart = new THREE.Vector3(worldPos.x, y, worldPos.z);
-            playerStartYaw = Math.atan2(forward.x, forward.z);
-            console.log(`📍 Line211 center: (${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)})`);
-            console.log(`✅ Computed playerStart near Line211 at (${playerStart.x.toFixed(2)}, ${playerStart.y.toFixed(2)}, ${playerStart.z.toFixed(2)})`);
-            if (characterModel) {
-                characterModel.position.copy(playerStart);
-                if (playerStartYaw !== null) characterModel.rotation.y = playerStartYaw;
-                console.log(`🧍 Soldier moved to Line211 spawn at (${characterModel.position.x.toFixed(2)}, ${characterModel.position.y.toFixed(2)}, ${characterModel.position.z.toFixed(2)})`);
-            } else {
-                needSpawnAtLine211 = true;
-            }
-            // Store reference for teleport detection
-            line211Mesh = child;
-        }
-
+        
         // Store NPCs for collision detection
         const npcNames = ["Human", "Human_1", "Human_2", "Low_Poly_Human", "Renzo"];
         if (npcNames.includes(child.name)) {
@@ -198,7 +160,6 @@ loader.load("/models/west.glb", (gltf) => {
                     console.log(`   Character position after: y=${characterModel.position.y.toFixed(2)}`);
                 }
             }
-            // (Line211 handled above for both Mesh and Group)
         }
     });
     console.log('🔍 === END WEST.GLB LISTING ===');
@@ -217,20 +178,8 @@ loader.load("/models/Soldier.glb", (gltf) => {
 
     characterModel = model;
 
-    // Position preference: playerStart (near Line211) → plane top → default
-    if (playerStart) {
-        model.position.copy(playerStart);
-        if (playerStartYaw !== null) model.rotation.y = playerStartYaw;
-    } else {
-        // Mark that we must snap to Line211 once available
-        needSpawnAtLine211 = true;
-        if (planeObject) {
-            positionCharacterOnPlane();
-        } else {
-            model.position.set(0, 2, 3);
-        }
-    }
-    console.log(`🧍 Soldier spawn at (${model.position.x.toFixed(2)}, ${model.position.y.toFixed(2)}, ${model.position.z.toFixed(2)})`);
+    if (planeObject) positionCharacterOnPlane();
+    else model.position.set(0, 2, 3);
     
     // Initialize last character position for collision detection
     lastCharacterPosition.copy(model.position);
@@ -421,17 +370,6 @@ function checkCollisions() {
     
     // Get character bounding box
     const charBox = new THREE.Box3().setFromObject(characterModel);
-    
-    // Teleport to Labs when touching Line211
-    if (!hasTeleportedToLabs && line211Mesh) {
-        const lineBox = new THREE.Box3().setFromObject(line211Mesh);
-        if (charBox.intersectsBox(lineBox)) {
-            hasTeleportedToLabs = true;
-            console.log('🚪 Touching Line211 → teleporting to Labs.html');
-            window.location.href = 'labs.html';
-            return;
-        }
-    }
     
     // Check collision with obstacles (buildings)
     for (const obstacle of obstacles) {
