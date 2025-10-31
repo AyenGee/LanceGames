@@ -101,15 +101,7 @@ function createLoadingUI() {
 function injectStartScreenStyles() {
     if (document.getElementById('start-screen-styles')) return;
     const css = `
-    html, body, #app { height: 100%; } html, body { margin: 0; }
-    #start-screen.overlay { /* styles */ position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(10,10,13,0.8); backdrop-filter: blur(2px); opacity: 1; transition: opacity 300ms ease; }
-    #start-screen.overlay.hidden { opacity: 0; pointer-events: none; }
-    #start-screen .panel { /* styles */ width: min(92vw, 560px); padding: 28px 32px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.45); background: linear-gradient(180deg, #1b1f2a, #0f1218); color: #fff; text-align: center; }
-    #start-screen .title { margin: 0 0 8px; font-size: clamp(28px, 4vw, 40px); letter-spacing: 0.5px; }
-    #start-screen .subtitle { margin: 0 0 24px; opacity: 0.9; }
-    #start-screen .btn { display: inline-block; margin: 6px 0 14px; padding: 12px 22px; font-size: 16px; border: 0; border-radius: 999px; cursor: pointer; background: #ffd400; color: #111; }
-    #start-screen .row { display: flex; gap: 16px; justify-content: center; align-items: center; }
-    #start-screen .link { background: none; border: none; color: #9cc8ff; cursor: pointer; text-decoration: underline; }
+    
     `;
     const style = document.createElement('style'); style.id = 'start-screen-styles'; style.textContent = css; document.head.appendChild(style);
 }
@@ -167,7 +159,7 @@ manager.onLoad = function () {
     setTimeout(() => {
         loadingOverlay.classList.add('is-hidden');
         setTimeout(() => loadingOverlay.remove(), 500); // Remove after fade out
-        playIntroVideo('./assets/intro.mp4', showStartScreenAfterLoad);
+        playIntroVideo('./assets/intro2.mp4', showStartScreenAfterLoad);
     }, delay);
 };
 
