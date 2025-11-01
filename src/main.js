@@ -348,11 +348,12 @@ function setupStartOverlay() {
 //----------------------------------
 // === Collectibles: Reports ===
 const paperBoxes = []; const papers = []; let reportsCollected = 0; const totalReports = 3; let allReportsAnnounced = false;
+const reportLabels = []; // Store labels for each paper
 function spawnPapers() {
     const positions = [ new THREE.Vector3(1.2, 1.5, 2.5), new THREE.Vector3(-2.0, 1.5, -1.5), new THREE.Vector3(3.0, 1.5, -3.0) ];
     const geo = new THREE.PlaneGeometry(0.6, 0.8);
     const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide });
-    positions.slice(0, totalReports).forEach((pos) => {
+    positions.slice(0, totalReports).forEach((pos, index) => {
         const paper = new THREE.Mesh(geo, mat.clone());
         paper.rotation.x = -Math.PI / 2;
         paper.position.copy(pos);
@@ -360,6 +361,49 @@ function spawnPapers() {
         scene.add(paper);
         papers.push(paper);
         paperBoxes.push(new THREE.Box3());
+        
+        // Create green "REPORT" label above paper
+        const labelText = 'REPORT';
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = 512;
+        canvas.height = 256;
+        
+        // Green gradient background
+        const gradient = context.createRadialGradient(256, 128, 20, 256, 128, 256);
+        gradient.addColorStop(0, 'rgba(0, 255, 0, 0.6)');
+        gradient.addColorStop(0.3, 'rgba(0, 200, 0, 0.25)');
+        gradient.addColorStop(1, 'rgba(0, 200, 0, 0)');
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // White text with green glow
+        context.font = 'bold 120px sans-serif';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillStyle = '#ffffff';
+        context.shadowColor = '#00ff00';
+        context.shadowBlur = 40;
+        context.fillText(labelText, canvas.width / 2, canvas.height / 2 + 10);
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.encoding = THREE.sRGBEncoding;
+        const labelMaterial = new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+        const sprite = new THREE.Sprite(labelMaterial);
+        sprite.scale.set(1.8, 0.9, 1.0);
+        
+        // Position label above paper
+        const labelPos = pos.clone();
+        labelPos.y += 1.0; // Height above paper
+        sprite.position.copy(labelPos);
+        
+        scene.add(sprite);
+        reportLabels.push({ sprite, paperIndex: index, offsetY: 1.0 });
     });
 }
 //----------------------------------
@@ -543,6 +587,15 @@ function checkCollisions(character) {
         if (charBox.intersectsBox(paperBoxes[i])) {
             p.userData.collected = true; reportsCollected++; updateHUD(); showMessage('Report found!');
             scene.remove(p); p.geometry.dispose(); if (p.material.dispose) p.material.dispose(); papers[i] = null;
+            
+            // Remove label when paper is collected
+            const label = reportLabels.find(l => l.paperIndex === i);
+            if (label && label.sprite) {
+                scene.remove(label.sprite);
+                label.sprite.material.map.dispose();
+                label.sprite.material.dispose();
+            }
+            
             if (!allReportsAnnounced && reportsCollected >= totalReports) { allReportsAnnounced = true; showMessage('All reports collected! Go through the portal.'); }
         }
     }
