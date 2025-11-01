@@ -11,6 +11,7 @@ let yaw = 0;
 let pitch = 0;
 let gamePaused = null;
 let gameStarted = null;
+let gameEnded = false;
 
 // === HUD SETUP (Your existing HUD code) ===
 const hud = document.createElement('div');
@@ -242,6 +243,59 @@ document.addEventListener('pointerlockchange', () => {
 });
 // === END HUD ===
 
+/* =========================
+   ARRIVAL OVERLAY
+========================= */
+gamePaused = true;
+(function setupArrivalOverlay() {
+  const overlay = document.createElement('div');
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    inset: '0',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(0,0,0,0.7)',
+    color: '#fff',
+    fontFamily: 'sans-serif',
+    textAlign: 'center',
+    padding: '24px',
+    zIndex: '10000',
+  });
+
+  const text = document.createElement('div');
+  Object.assign(text.style, {
+    maxWidth: '720px',
+    lineHeight: '1.6',
+    fontSize: '18px',
+    marginBottom: '16px',
+  });
+  text.textContent = 'Great job of the previous state\n\nNow it seems that you still require 3 signatures. Find the Lecturers to get your signatures.\n\n2 lecturers are in the place you are and the other is in the labs.\n\nAfter finding them a "OFFICE " sign will show up on one of the gates. them you will be able to go to the offices.\n\nAll the best.';
+
+  const btn = document.createElement('button');
+  btn.textContent = 'CONTINUE';
+  Object.assign(btn.style, {
+    cursor: 'pointer',
+    padding: '10px 18px',
+    fontSize: '16px',
+    border: 'none',
+    borderRadius: '6px',
+    background: '#00a86b',
+    color: '#fff',
+  });
+  btn.addEventListener('click', () => {
+    gamePaused = false;
+    gameStarted = true;
+    setButtonsState();
+
+    overlay.remove();
+  });
+
+  overlay.appendChild(text);
+  overlay.appendChild(btn);
+  document.body.appendChild(overlay);
+})();
 
 // === SCENE SETUP ===
 const scene = new THREE.Scene();

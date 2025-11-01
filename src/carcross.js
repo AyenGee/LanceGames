@@ -731,7 +731,7 @@ function teleportToWest() {
     fontSize: '20px',
     marginBottom: '20px',
   });
-  text.textContent = 'Great Job, but one of your reports is missing signatures from 3 lecturers. Find them at West to get your signatures.';
+  text.textContent = 'Complete';
 
   const btn = document.createElement('button');
   btn.textContent = 'CONTINUE';
