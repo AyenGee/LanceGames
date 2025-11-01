@@ -337,6 +337,8 @@ function animate() {
     if (timeMsLeft <= 0) {
       timeMsLeft = 0;
       gameEnded = true;
+      persistTimerState(timeMsLeft, false);
+      showGameOverOverlay();
     }
     updateHUD();
     persistThrottle += dt;
@@ -424,6 +426,98 @@ function showWinOverlay() {
 
   card.appendChild(title);
   card.appendChild(body);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+}
+
+// Game Over overlay (when time runs out)
+function showGameOverOverlay() {
+  // Add CSS animations if not exists
+  if (!document.getElementById('overlay-animations')) {
+    const style = document.createElement('style');
+    style.id = 'overlay-animations';
+    style.textContent = `
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes glowPulse { 0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 69, 0, 0.5)); } 50% { filter: drop-shadow(0 0 20px rgba(255, 140, 0, 1)); } }
+      @keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 168, 107, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 200, 150, 0.8); } }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const overlay = document.createElement('div');
+  overlay.style.position = 'fixed';
+  overlay.style.inset = '0';
+  overlay.style.background = 'radial-gradient(circle at center, rgba(150, 0, 0, 0.3), rgba(0, 0, 0, 0.95))';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '10001';
+  overlay.style.animation = 'fadeIn 0.3s ease-in';
+
+  const card = document.createElement('div');
+  card.style.maxWidth = '850px';
+  card.style.margin = '20px';
+  card.style.background = 'linear-gradient(145deg, rgba(80, 20, 20, 0.95), rgba(40, 10, 10, 0.98))';
+  card.style.padding = '40px 50px';
+  card.style.borderRadius = '20px';
+  card.style.border = '3px solid rgba(255, 69, 0, 0.4)';
+  card.style.boxShadow = '0 25px 80px rgba(255, 69, 0, 0.3), inset 0 0 50px rgba(255, 69, 0, 0.1)';
+  card.style.fontFamily = '"Arial Black", "Arial Bold", Arial, sans-serif';
+  card.style.animation = 'glowPulse 2s ease-in-out infinite';
+
+  const title = document.createElement('div');
+  title.textContent = 'GAME OVER';
+  title.style.fontSize = '48px';
+  title.style.fontWeight = '900';
+  title.style.marginBottom = '25px';
+  title.style.letterSpacing = '3px';
+  title.style.textTransform = 'uppercase';
+  title.style.background = 'linear-gradient(135deg, #ff4500, #ff0000, #cc0000)';
+  title.style.WebkitBackgroundClip = 'text';
+  title.style.WebkitTextFillColor = 'transparent';
+  title.style.textShadow = '0 0 30px rgba(255, 69, 0, 0.5)';
+
+  const body = document.createElement('div');
+  body.textContent = "You've ran Out of time.";
+  body.style.fontSize = '22px';
+  body.style.lineHeight = '1.8';
+  body.style.marginBottom = '30px';
+  body.style.color = '#ffcccc';
+  body.style.textShadow = '0 2px 10px rgba(0, 0, 0, 0.5)';
+
+  const btn = document.createElement('button');
+  btn.textContent = 'RESTART GAME';
+  btn.style.cursor = 'pointer';
+  btn.style.padding = '16px 40px';
+  btn.style.fontSize = '20px';
+  btn.style.fontWeight = '900';
+  btn.style.border = 'none';
+  btn.style.borderRadius = '12px';
+  btn.style.background = 'linear-gradient(135deg, #ff4500, #ff6b00)';
+  btn.style.color = '#fff';
+  btn.style.letterSpacing = '2px';
+  btn.style.textTransform = 'uppercase';
+  btn.style.boxShadow = '0 0 20px rgba(255, 69, 0, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3)';
+  btn.style.transition = 'all 0.3s ease';
+  
+  btn.addEventListener('mouseenter', () => {
+    btn.style.animation = 'buttonPulse 2s ease-in-out infinite';
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.animation = 'none';
+  });
+  
+  btn.addEventListener('click', () => {
+    // Clear all game state and redirect to index.html
+    localStorage.removeItem('gameTimer');
+    localStorage.removeItem('gameState');
+    localStorage.removeItem('signatures');
+    window.location.href = 'index.html';
+  });
+
+  card.appendChild(title);
+  card.appendChild(body);
+  card.appendChild(btn);
   overlay.appendChild(card);
   document.body.appendChild(overlay);
 }
