@@ -136,6 +136,111 @@ function setupHUD() {
 }
 setupHUD();
 
+// === V Key Instruction Overlay ===
+(function showVKeyInstruction() {
+    // Add CSS animations if not exists
+    if (!document.getElementById('overlay-animations')) {
+        const style = document.createElement('style');
+        style.id = 'overlay-animations';
+        style.textContent = `
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes glowPulse { 0%, 100% { filter: drop-shadow(0 0 10px rgba(0, 200, 255, 0.5)); } 50% { filter: drop-shadow(0 0 20px rgba(0, 255, 255, 1)); } }
+            @keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 168, 107, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 200, 150, 0.8); } }
+        `;
+        document.head.appendChild(style);
+    }
+
+    const overlay = document.createElement('div');
+    Object.assign(overlay.style, {
+        position: 'fixed',
+        inset: '0',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'radial-gradient(circle at center, rgba(100, 50, 150, 0.3), rgba(0, 0, 0, 0.95))',
+        color: '#fff',
+        fontFamily: '"Arial Black", "Arial Bold", Arial, sans-serif',
+        textAlign: 'center',
+        padding: '24px',
+        zIndex: '10000',
+        animation: 'fadeIn 0.3s ease-in',
+    });
+
+    const card = document.createElement('div');
+    Object.assign(card.style, {
+        maxWidth: '900px',
+        margin: '20px',
+        background: 'linear-gradient(145deg, rgba(50, 30, 80, 0.95), rgba(20, 10, 40, 0.98))',
+        padding: '40px 50px',
+        borderRadius: '20px',
+        border: '3px solid rgba(150, 100, 255, 0.4)',
+        boxShadow: '0 25px 80px rgba(150, 100, 255, 0.3), inset 0 0 50px rgba(150, 100, 255, 0.1)',
+        fontFamily: 'inherit',
+        animation: 'glowPulse 2s ease-in-out infinite',
+    });
+
+    const title = document.createElement('div');
+    Object.assign(title.style, {
+        fontSize: '36px',
+        fontWeight: '900',
+        marginBottom: '25px',
+        letterSpacing: '3px',
+        textTransform: 'uppercase',
+        background: 'linear-gradient(135deg, #ff00ff, #9d4edd, #7b2cbf)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        textShadow: '0 0 30px rgba(150, 100, 255, 0.5)',
+    });
+    title.textContent = 'Important!';
+
+    const text = document.createElement('div');
+    Object.assign(text.style, {
+        maxWidth: '720px',
+        lineHeight: '1.8',
+        fontSize: '18px',
+        marginBottom: '30px',
+        whiteSpace: 'pre-line',
+        color: '#e0d0ff',
+        textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
+    });
+    text.textContent = 'Press the V key twice to toggle camera mode.\n\nThis will help you navigate the labs better!';
+
+    const btn = document.createElement('button');
+    btn.textContent = 'GOT IT';
+    Object.assign(btn.style, {
+        cursor: 'pointer',
+        padding: '16px 40px',
+        fontSize: '20px',
+        fontWeight: '900',
+        border: 'none',
+        borderRadius: '12px',
+        background: 'linear-gradient(135deg, #00a86b, #00d4aa)',
+        color: '#fff',
+        letterSpacing: '2px',
+        textTransform: 'uppercase',
+        boxShadow: '0 0 20px rgba(0, 168, 107, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3)',
+        transition: 'all 0.3s ease',
+        animation: 'buttonPulse 2s ease-in-out infinite',
+    });
+    btn.addEventListener('mouseenter', () => {
+        btn.style.animation = 'buttonPulse 2s ease-in-out infinite';
+    });
+    btn.addEventListener('mouseleave', () => {
+        btn.style.animation = 'none';
+    });
+    
+    btn.addEventListener('click', () => {
+        overlay.remove();
+    });
+
+    card.appendChild(title);
+    card.appendChild(text);
+    card.appendChild(btn);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+})();
+
 // === First-Person Controls (like west.js/main.js) ===
 let mouseSensitivity = 0.002;
 let yaw = 0;
