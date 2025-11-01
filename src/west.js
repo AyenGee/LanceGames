@@ -717,14 +717,14 @@ function createHereMarkersForNPC(npcMesh) {
             depthWrite: false,
             blending: THREE.AdditiveBlending
         });
-        const sprite = new THREE.Sprite(material);
-        sprite.scale.set(0.8, 0.8, 0.8);
-        return sprite;
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(2, 2, 2);
+    return sprite;
     }
 
     const letters = ['H','E','R','E'];
     const color = '#66ccff';
-    const spacing = 0.7;
+    const spacing = 1.2;
     const totalWidth = spacing * (letters.length - 1);
     letters.forEach((ch, i) => {
         const s = makeLetterSprite(ch, color);
@@ -733,7 +733,7 @@ function createHereMarkersForNPC(npcMesh) {
     });
 
     // Add a small point light to act as a light source hint
-    const light = new THREE.PointLight(0x66ccff, 0.8, 6, 2.0);
+    const light = new THREE.PointLight(0x66ccff, 1.2, 12, 2.0);
     light.position.set(0, 0, 0);
     group.add(light);
 
@@ -782,7 +782,7 @@ function createPortalLabel(mesh, text) {
             blending: THREE.AdditiveBlending
         });
         const sprite = new THREE.Sprite(material);
-        sprite.scale.set(2.2, 1.1, 1.0);
+        sprite.scale.set(3.5, 2.0, 1.0);
         return sprite;
     }
 
@@ -792,7 +792,7 @@ function createPortalLabel(mesh, text) {
     group.add(sprite);
 
     // Light for emphasis
-    const light = new THREE.PointLight(0xffcc66, 0.7, 6, 2.0);
+    const light = new THREE.PointLight(0xffcc66, 1.2, 12, 2.0);
     group.add(light);
 
     // Initial placement: in front of mesh and slightly above top
