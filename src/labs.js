@@ -311,6 +311,8 @@ let planeObject = null; // Floor named Plane004
 let hasTeleportedToWest = false; // prevent multiple redirects
 let line211Mesh = null; // teleporter back to west
 let labHumanMesh = null; // the NPC in labs that grants the final signature
+const obstacles = []; // Array to store obstacle collision boxes
+let lastCharacterPosition = new THREE.Vector3(); // For collision detection
 
 loader.load("models/labs.glb", (gltf) => {
     environment = gltf.scene;
@@ -333,7 +335,24 @@ loader.load("models/labs.glb", (gltf) => {
         // Find teleporter back to west; adjust name if needed in the model
         if (obj.name === 'Line211') line211Mesh = obj;
         if (obj.name === 'Human') labHumanMesh = obj; // final signature in labs
+        
+        // Collect obstacles for collision detection (Plane*, Cube*, Desk* but NOT Plane004)
+        if (obj.isMesh) {
+            const objName = obj.name;
+            if (objName === 'Plane004') {
+                // Skip Plane004 (floor)
+                return;
+            }
+            if (objName.startsWith('Plane') || objName.startsWith('Cube') || objName.startsWith('Desk')) {
+                obj.updateMatrixWorld(true);
+                const box = new THREE.Box3().setFromObject(obj);
+                obstacles.push({ name: objName, box: box, mesh: obj });
+                console.log(`✅ Added obstacle collision box for: ${objName}`);
+            }
+        }
     });
+    
+    console.log(`✅ Total obstacles collected: ${obstacles.length}`);
     if (planeObject) {
         const planeBox = new THREE.Box3().setFromObject(planeObject);
         console.log(`✅ Plane004 found. Y max=${planeBox.max.y.toFixed(2)}`);
@@ -405,6 +424,9 @@ loader.load("models/Soldier.glb", (gltf) => {
         console.log(`📏 Heights (on load) → Soldier Y=${playerModel.position.y.toFixed(2)} | Plane004 Y=n/a`);
     }
     
+    // Initialize lastCharacterPosition for collision detection
+    lastCharacterPosition.copy(playerModel.position);
+    
     scene.add(playerModel);
 
     const mixer = new THREE.AnimationMixer(playerModel);
@@ -437,6 +459,44 @@ document.addEventListener('keydown', (e) => {
     if (e.key.toLowerCase() === CAMERA_TOGGLE_KEY) toggleCameraMode();
 });
 
+// === Collision Detection ===
+function checkCollisions() {
+    if (!playerModel) return;
+    
+    const currentPosition = playerModel.position.clone();
+    
+    // Clamp character Y position to floor Plane004 if exists
+    if (planeObject) {
+        const planeBox = new THREE.Box3().setFromObject(planeObject);
+        const minY = planeBox.max.y;
+        if (playerModel.position.y < minY) {
+            playerModel.position.y = minY;
+        }
+    }
+    
+    // Get collision box (character in third-person, camera proxy in first-person)
+    const collisionBox = isFirstPerson
+        ? new THREE.Box3().setFromCenterAndSize(
+            camera.position.clone(),
+            new THREE.Vector3(0.6, 1.8, 0.6)
+        )
+        : new THREE.Box3().setFromObject(playerModel);
+    
+    // Check collision with obstacles (buildings)
+    for (const obstacle of obstacles) {
+        const currentBox = obstacle.box;
+        if (collisionBox.intersectsBox(currentBox)) {
+            // Collision with obstacle - revert to last valid position
+            playerModel.position.copy(lastCharacterPosition);
+            console.log(`⚠️ Collision with ${obstacle.name} - movement blocked`);
+            return; // Exit early to prevent further movement
+        }
+    }
+    
+    // Update last valid position if no obstacle collision
+    lastCharacterPosition.copy(currentPosition);
+}
+
 // === Animate ===
 const clock = new THREE.Clock();
 function animate() {
@@ -461,6 +521,11 @@ function animate() {
             camera.position.copy(controls.target.clone().add(toCam));
         }
         controls.update();
+    }
+
+    // Check collision with obstacles (bounce back if hitting walls/objects)
+    if (playerModel && obstacles.length > 0) {
+        checkCollisions();
     }
 
     // Collect final signature from labs Human
