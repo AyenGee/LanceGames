@@ -153,6 +153,18 @@ updateHUD();
    ARRIVAL OVERLAY
 ========================= */
 (function setupArrivalOverlay() {
+  // Add CSS animations if not exists
+  if (!document.getElementById('overlay-animations')) {
+    const style = document.createElement('style');
+    style.id = 'overlay-animations';
+    style.textContent = `
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes glowPulse { 0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 69, 0, 0.5)); } 50% { filter: drop-shadow(0 0 20px rgba(255, 140, 0, 1)); } }
+      @keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 168, 107, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 200, 150, 0.8); } }
+    `;
+    document.head.appendChild(style);
+  }
+
   const overlay = document.createElement('div');
   Object.assign(overlay.style, {
     position: 'fixed',
@@ -161,21 +173,51 @@ updateHUD();
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'rgba(0,0,0,0.7)',
+    background: 'radial-gradient(circle at center, rgba(150, 50, 0, 0.3), rgba(0, 0, 0, 0.95))',
     color: '#fff',
-    fontFamily: 'sans-serif',
+    fontFamily: '"Arial Black", "Arial Bold", Arial, sans-serif',
     textAlign: 'center',
     padding: '24px',
     zIndex: '10000',
+    animation: 'fadeIn 0.3s ease-in',
   });
+
+  const card = document.createElement('div');
+  Object.assign(card.style, {
+    maxWidth: '1000px',
+    margin: '20px',
+    background: 'linear-gradient(145deg, rgba(80, 40, 20, 0.95), rgba(40, 20, 10, 0.98))',
+    padding: '40px 50px',
+    borderRadius: '20px',
+    border: '3px solid rgba(255, 140, 0, 0.4)',
+    boxShadow: '0 25px 80px rgba(255, 140, 0, 0.3), inset 0 0 50px rgba(255, 140, 0, 0.1)',
+    fontFamily: 'inherit',
+    animation: 'glowPulse 2s ease-in-out infinite',
+  });
+
+  const title = document.createElement('div');
+  Object.assign(title.style, {
+    fontSize: '42px',
+    fontWeight: '900',
+    marginBottom: '25px',
+    letterSpacing: '3px',
+    textTransform: 'uppercase',
+    background: 'linear-gradient(135deg, #ff8c00, #ff4500, #ff6b00)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    textShadow: '0 0 30px rgba(255, 140, 0, 0.5)',
+  });
+  title.textContent = 'Final Challenge!';
 
   const text = document.createElement('div');
   Object.assign(text.style, {
-    maxWidth: '720px',
-    lineHeight: '1.6',
+    maxWidth: '900px',
+    lineHeight: '1.8',
     fontSize: '18px',
-    marginBottom: '16px',
+    marginBottom: '30px',
     whiteSpace: 'pre-line',
+    color: '#ffe0cc',
+    textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
   });
   text.textContent = 'Great. you have all the reports and signatures.  recently Rueben has been pissed at you students so he created a maze system such that it is a little harder for all of you to find his office. ALL THE BEST FINDING IT IN TIME!!.';
 
@@ -183,19 +225,34 @@ updateHUD();
   btn.textContent = 'CONTINUE';
   Object.assign(btn.style, {
     cursor: 'pointer',
-    padding: '10px 18px',
-    fontSize: '16px',
+    padding: '16px 40px',
+    fontSize: '20px',
+    fontWeight: '900',
     border: 'none',
-    borderRadius: '6px',
-    background: '#00a86b',
+    borderRadius: '12px',
+    background: 'linear-gradient(135deg, #ff6b00, #ff8c00)',
     color: '#fff',
+    letterSpacing: '2px',
+    textTransform: 'uppercase',
+    boxShadow: '0 0 20px rgba(255, 140, 0, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3)',
+    transition: 'all 0.3s ease',
   });
+  
+  btn.addEventListener('mouseenter', () => {
+    btn.style.animation = 'buttonPulse 2s ease-in-out infinite';
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.animation = 'none';
+  });
+  
   btn.addEventListener('click', () => {
     overlay.remove();
   });
 
-  overlay.appendChild(text);
-  overlay.appendChild(btn);
+  card.appendChild(title);
+  card.appendChild(text);
+  card.appendChild(btn);
+  overlay.appendChild(card);
   document.body.appendChild(overlay);
 })();
 

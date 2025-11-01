@@ -278,6 +278,18 @@ setButtonsState();
 ========================= */
 gamePaused = true;
 (function setupArrivalOverlay() {
+  // Add CSS animations if not exists
+  if (!document.getElementById('overlay-animations')) {
+    const style = document.createElement('style');
+    style.id = 'overlay-animations';
+    style.textContent = `
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes glowPulse { 0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); } 50% { filter: drop-shadow(0 0 20px rgba(255, 255, 0, 1)); } }
+      @keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 168, 107, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 200, 150, 0.8); } }
+    `;
+    document.head.appendChild(style);
+  }
+
   const overlay = document.createElement('div');
   Object.assign(overlay.style, {
     position: 'fixed',
@@ -286,34 +298,77 @@ gamePaused = true;
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'rgba(0,0,0,0.7)',
+    background: 'radial-gradient(circle at center, rgba(255, 165, 0, 0.2), rgba(0, 0, 0, 0.95))',
     color: '#fff',
-    fontFamily: 'sans-serif',
+    fontFamily: '"Arial Black", "Arial Bold", Arial, sans-serif',
     textAlign: 'center',
     padding: '24px',
     zIndex: '10000',
+    animation: 'fadeIn 0.3s ease-in',
   });
+
+  const card = document.createElement('div');
+  Object.assign(card.style, {
+    maxWidth: '850px',
+    margin: '20px',
+    background: 'linear-gradient(145deg, rgba(80, 50, 20, 0.95), rgba(40, 25, 10, 0.98))',
+    padding: '40px 50px',
+    borderRadius: '20px',
+    border: '3px solid rgba(255, 215, 0, 0.4)',
+    boxShadow: '0 25px 80px rgba(255, 215, 0, 0.3), inset 0 0 50px rgba(255, 215, 0, 0.1)',
+    fontFamily: 'inherit',
+    animation: 'glowPulse 2s ease-in-out infinite',
+  });
+
+  const title = document.createElement('div');
+  Object.assign(title.style, {
+    fontSize: '38px',
+    fontWeight: '900',
+    marginBottom: '25px',
+    letterSpacing: '3px',
+    textTransform: 'uppercase',
+    background: 'linear-gradient(135deg, #ffd700, #ffaa00, #ff8c00)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    textShadow: '0 0 30px rgba(255, 215, 0, 0.5)',
+  });
+  title.textContent = 'Caution Ahead!';
 
   const text = document.createElement('div');
   Object.assign(text.style, {
     maxWidth: '720px',
-    lineHeight: '1.6',
+    lineHeight: '1.8',
     fontSize: '18px',
-    marginBottom: '16px',
+    marginBottom: '30px',
+    color: '#ffe0cc',
+    textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
   });
   text.textContent = "Oh no, you'll have to go through the cars before you can proceed.";
 
   const btn = document.createElement('button');
-  btn.textContent = 'CONTINUE';
+  btn.textContent = 'START MISSION';
   Object.assign(btn.style, {
     cursor: 'pointer',
-    padding: '10px 18px',
-    fontSize: '16px',
+    padding: '16px 40px',
+    fontSize: '20px',
+    fontWeight: '900',
     border: 'none',
-    borderRadius: '6px',
-    background: '#00a86b',
+    borderRadius: '12px',
+    background: 'linear-gradient(135deg, #00a86b, #00d4aa)',
     color: '#fff',
+    letterSpacing: '2px',
+    textTransform: 'uppercase',
+    boxShadow: '0 0 20px rgba(0, 168, 107, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3)',
+    transition: 'all 0.3s ease',
   });
+  
+  btn.addEventListener('mouseenter', () => {
+    btn.style.animation = 'buttonPulse 2s ease-in-out infinite';
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.animation = 'none';
+  });
+  
   btn.addEventListener('click', () => {
     gamePaused = false;
     gameStarted = true;
@@ -332,8 +387,10 @@ gamePaused = true;
     persistTimerState(timeMsLeft, true);
   });
 
-  overlay.appendChild(text);
-  overlay.appendChild(btn);
+  card.appendChild(title);
+  card.appendChild(text);
+  card.appendChild(btn);
+  overlay.appendChild(card);
   document.body.appendChild(overlay);
 })();
 
@@ -716,34 +773,79 @@ function teleportToWest() {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'rgba(0,0,0,0.85)',
+    background: 'radial-gradient(circle at center, rgba(0, 100, 150, 0.3), rgba(0, 0, 0, 0.95))',
     color: '#fff',
-    fontFamily: 'sans-serif',
+    fontFamily: '"Arial Black", "Arial Bold", Arial, sans-serif',
     textAlign: 'center',
     padding: '24px',
     zIndex: '10001',
+    animation: 'fadeIn 0.3s ease-in',
+  });
+
+  // Add CSS animation if not exists
+  if (!document.getElementById('overlay-animations')) {
+    const style = document.createElement('style');
+    style.id = 'overlay-animations';
+    style.textContent = `
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes glowPulse { 0%, 100% { filter: drop-shadow(0 0 10px rgba(0, 200, 255, 0.5)); } 50% { filter: drop-shadow(0 0 20px rgba(0, 255, 255, 1)); } }
+      @keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 168, 107, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 200, 150, 0.8); } }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const card = document.createElement('div');
+  Object.assign(card.style, {
+    maxWidth: '800px',
+    margin: '20px',
+    background: 'linear-gradient(145deg, rgba(15, 50, 80, 0.95), rgba(5, 20, 35, 0.98))',
+    padding: '40px 50px',
+    borderRadius: '20px',
+    border: '3px solid rgba(0, 200, 255, 0.4)',
+    boxShadow: '0 25px 80px rgba(0, 200, 255, 0.3), inset 0 0 50px rgba(0, 200, 255, 0.1)',
+    fontFamily: 'inherit',
+    animation: 'glowPulse 2s ease-in-out infinite',
   });
 
   const text = document.createElement('div');
   Object.assign(text.style, {
-    maxWidth: '720px',
-    lineHeight: '1.6',
-    fontSize: '20px',
-    marginBottom: '20px',
+    fontSize: '48px',
+    fontWeight: '900',
+    marginBottom: '30px',
+    letterSpacing: '3px',
+    textTransform: 'uppercase',
+    background: 'linear-gradient(135deg, #00ffff, #00a8ff, #0066ff)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    textShadow: '0 0 30px rgba(0, 200, 255, 0.5)',
+    lineHeight: '1.2',
   });
-  text.textContent = 'Complete';
+  text.textContent = 'COMPLETE';
 
   const btn = document.createElement('button');
   btn.textContent = 'CONTINUE';
   Object.assign(btn.style, {
     cursor: 'pointer',
-    padding: '12px 24px',
-    fontSize: '16px',
+    padding: '16px 40px',
+    fontSize: '20px',
+    fontWeight: '900',
     border: 'none',
-    borderRadius: '6px',
-    background: '#00a86b',
+    borderRadius: '12px',
+    background: 'linear-gradient(135deg, #00a86b, #00d4aa)',
     color: '#fff',
+    letterSpacing: '2px',
+    textTransform: 'uppercase',
+    boxShadow: '0 0 20px rgba(0, 168, 107, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3)',
+    transition: 'all 0.3s ease',
+    animation: 'buttonPulse 2s ease-in-out infinite',
   });
+  btn.addEventListener('mouseenter', () => {
+    btn.style.animation = 'buttonPulse 2s ease-in-out infinite';
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.animation = 'none';
+  });
+  
   btn.addEventListener('click', () => {
     overlay.style.transition = 'opacity 0.3s';
     overlay.style.opacity = '0';
@@ -752,8 +854,9 @@ function teleportToWest() {
     }, 300);
   });
 
-  overlay.appendChild(text);
-  overlay.appendChild(btn);
+  card.appendChild(text);
+  card.appendChild(btn);
+  overlay.appendChild(card);
   document.body.appendChild(overlay);
 }
 
