@@ -149,6 +149,113 @@ function updateHUD() {
 }
 updateHUD();
 
+/* =========================
+   ARRIVAL OVERLAY
+========================= */
+(function setupArrivalOverlay() {
+  // Add CSS animations if not exists
+  if (!document.getElementById('overlay-animations')) {
+    const style = document.createElement('style');
+    style.id = 'overlay-animations';
+    style.textContent = `
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes glowPulse { 0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 69, 0, 0.5)); } 50% { filter: drop-shadow(0 0 20px rgba(255, 140, 0, 1)); } }
+      @keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 168, 107, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 200, 150, 0.8); } }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const overlay = document.createElement('div');
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    inset: '0',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'radial-gradient(circle at center, rgba(150, 50, 0, 0.3), rgba(0, 0, 0, 0.95))',
+    color: '#fff',
+    fontFamily: '"Arial Black", "Arial Bold", Arial, sans-serif',
+    textAlign: 'center',
+    padding: '24px',
+    zIndex: '10000',
+    animation: 'fadeIn 0.3s ease-in',
+  });
+
+  const card = document.createElement('div');
+  Object.assign(card.style, {
+    maxWidth: '1000px',
+    margin: '20px',
+    background: 'linear-gradient(145deg, rgba(80, 40, 20, 0.95), rgba(40, 20, 10, 0.98))',
+    padding: '40px 50px',
+    borderRadius: '20px',
+    border: '3px solid rgba(255, 140, 0, 0.4)',
+    boxShadow: '0 25px 80px rgba(255, 140, 0, 0.3), inset 0 0 50px rgba(255, 140, 0, 0.1)',
+    fontFamily: 'inherit',
+    animation: 'glowPulse 2s ease-in-out infinite',
+  });
+
+  const title = document.createElement('div');
+  Object.assign(title.style, {
+    fontSize: '42px',
+    fontWeight: '900',
+    marginBottom: '25px',
+    letterSpacing: '3px',
+    textTransform: 'uppercase',
+    background: 'linear-gradient(135deg, #ff8c00, #ff4500, #ff6b00)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    textShadow: '0 0 30px rgba(255, 140, 0, 0.5)',
+  });
+  title.textContent = 'Final Challenge!';
+
+  const text = document.createElement('div');
+  Object.assign(text.style, {
+    maxWidth: '900px',
+    lineHeight: '1.8',
+    fontSize: '18px',
+    marginBottom: '30px',
+    whiteSpace: 'pre-line',
+    color: '#ffe0cc',
+    textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
+  });
+  text.textContent = 'Great. you have all the reports and signatures.  recently Rueben has been pissed at you students so he created a maze system such that it is a little harder for all of you to find his office. ALL THE BEST FINDING IT IN TIME!!.';
+
+  const btn = document.createElement('button');
+  btn.textContent = 'CONTINUE';
+  Object.assign(btn.style, {
+    cursor: 'pointer',
+    padding: '16px 40px',
+    fontSize: '20px',
+    fontWeight: '900',
+    border: 'none',
+    borderRadius: '12px',
+    background: 'linear-gradient(135deg, #ff6b00, #ff8c00)',
+    color: '#fff',
+    letterSpacing: '2px',
+    textTransform: 'uppercase',
+    boxShadow: '0 0 20px rgba(255, 140, 0, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3)',
+    transition: 'all 0.3s ease',
+  });
+  
+  btn.addEventListener('mouseenter', () => {
+    btn.style.animation = 'buttonPulse 2s ease-in-out infinite';
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.animation = 'none';
+  });
+  
+  btn.addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  card.appendChild(title);
+  card.appendChild(text);
+  card.appendChild(btn);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+})();
+
 // Load final scene and capture Plane
 loader.load('models/final.glb', (gltf) => {
   const env = gltf.scene;
@@ -230,6 +337,8 @@ function animate() {
     if (timeMsLeft <= 0) {
       timeMsLeft = 0;
       gameEnded = true;
+      persistTimerState(timeMsLeft, false);
+      showGameOverOverlay();
     }
     updateHUD();
     persistThrottle += dt;
@@ -284,39 +393,185 @@ animate();
 
 // Win overlay
 function showWinOverlay() {
+  // Add CSS animations if not exists
+  if (!document.getElementById('overlay-animations')) {
+    const style = document.createElement('style');
+    style.id = 'overlay-animations';
+    style.textContent = `
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes glowPulseWin { 0%, 100% { filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.6)); } 50% { filter: drop-shadow(0 0 30px rgba(255, 255, 0, 1)); } }
+      @keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(255, 255, 0, 0.8); } }
+    `;
+    document.head.appendChild(style);
+  }
+
   const overlay = document.createElement('div');
   overlay.style.position = 'fixed';
   overlay.style.inset = '0';
-  overlay.style.background = 'rgba(0,0,0,0.8)';
+  overlay.style.background = 'radial-gradient(circle at center, rgba(255, 215, 0, 0.4), rgba(0, 0, 0, 0.95))';
   overlay.style.display = 'flex';
   overlay.style.alignItems = 'center';
   overlay.style.justifyContent = 'center';
   overlay.style.zIndex = '10001';
+  overlay.style.animation = 'fadeIn 0.3s ease-in';
 
   const card = document.createElement('div');
-  card.style.maxWidth = '720px';
+  card.style.maxWidth = '850px';
   card.style.margin = '20px';
-  card.style.background = 'linear-gradient(135deg, rgba(20,20,20,0.95), rgba(35,35,35,0.95))';
-  card.style.color = '#fff';
-  card.style.padding = '28px 32px';
-  card.style.borderRadius = '14px';
-  card.style.boxShadow = '0 20px 60px rgba(0,0,0,0.6)';
-  card.style.fontFamily = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+  card.style.background = 'linear-gradient(145deg, rgba(100, 80, 0, 0.95), rgba(50, 40, 0, 0.98))';
+  card.style.padding = '40px 50px';
+  card.style.borderRadius = '20px';
+  card.style.border = '3px solid rgba(255, 215, 0, 0.4)';
+  card.style.boxShadow = '0 25px 80px rgba(255, 215, 0, 0.3), inset 0 0 50px rgba(255, 215, 0, 0.1)';
+  card.style.fontFamily = '"Arial Black", "Arial Bold", Arial, sans-serif';
+  card.style.animation = 'glowPulseWin 2s ease-in-out infinite';
 
   const title = document.createElement('div');
-  title.textContent = 'You Win!';
-  title.style.fontSize = '28px';
-  title.style.fontWeight = '800';
-  title.style.marginBottom = '10px';
+  title.textContent = 'VICTORY!';
+  title.style.fontSize = '56px';
+  title.style.fontWeight = '900';
+  title.style.marginBottom = '25px';
+  title.style.letterSpacing = '4px';
+  title.style.textTransform = 'uppercase';
+  title.style.background = 'linear-gradient(135deg, #ffd700, #ffed4e, #ffc700)';
+  title.style.WebkitBackgroundClip = 'text';
+  title.style.WebkitTextFillColor = 'transparent';
+  title.style.textShadow = '0 0 40px rgba(255, 215, 0, 0.6)';
 
   const body = document.createElement('div');
-  body.style.fontSize = '16px';
-  body.style.lineHeight = '1.7';
-  body.style.opacity = '0.95';
   body.textContent = 'You reached the office in time.';
+  body.style.fontSize = '24px';
+  body.style.lineHeight = '1.8';
+  body.style.marginBottom = '30px';
+  body.style.color = '#fff8dc';
+  body.style.textShadow = '0 2px 10px rgba(0, 0, 0, 0.5)';
+  body.style.fontWeight = '700';
+
+  const btn = document.createElement('button');
+  btn.textContent = 'PLAY AGAIN';
+  btn.style.cursor = 'pointer';
+  btn.style.padding = '16px 40px';
+  btn.style.fontSize = '20px';
+  btn.style.fontWeight = '900';
+  btn.style.border = 'none';
+  btn.style.borderRadius = '12px';
+  btn.style.background = 'linear-gradient(135deg, #ffd700, #ffed4e)';
+  btn.style.color = '#000';
+  btn.style.letterSpacing = '2px';
+  btn.style.textTransform = 'uppercase';
+  btn.style.boxShadow = '0 0 20px rgba(255, 215, 0, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3)';
+  btn.style.transition = 'all 0.3s ease';
+  
+  btn.addEventListener('mouseenter', () => {
+    btn.style.animation = 'buttonPulse 2s ease-in-out infinite';
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.animation = 'none';
+  });
+  
+  btn.addEventListener('click', () => {
+    // Clear all game state and redirect to index.html
+    localStorage.removeItem('gameTimer');
+    localStorage.removeItem('gameState');
+    localStorage.removeItem('signatures');
+    window.location.href = 'index.html';
+  });
 
   card.appendChild(title);
   card.appendChild(body);
+  card.appendChild(btn);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+}
+
+// Game Over overlay (when time runs out)
+function showGameOverOverlay() {
+  // Add CSS animations if not exists
+  if (!document.getElementById('overlay-animations')) {
+    const style = document.createElement('style');
+    style.id = 'overlay-animations';
+    style.textContent = `
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes glowPulse { 0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 69, 0, 0.5)); } 50% { filter: drop-shadow(0 0 20px rgba(255, 140, 0, 1)); } }
+      @keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 168, 107, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 200, 150, 0.8); } }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const overlay = document.createElement('div');
+  overlay.style.position = 'fixed';
+  overlay.style.inset = '0';
+  overlay.style.background = 'radial-gradient(circle at center, rgba(150, 0, 0, 0.3), rgba(0, 0, 0, 0.95))';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '10001';
+  overlay.style.animation = 'fadeIn 0.3s ease-in';
+
+  const card = document.createElement('div');
+  card.style.maxWidth = '850px';
+  card.style.margin = '20px';
+  card.style.background = 'linear-gradient(145deg, rgba(80, 20, 20, 0.95), rgba(40, 10, 10, 0.98))';
+  card.style.padding = '40px 50px';
+  card.style.borderRadius = '20px';
+  card.style.border = '3px solid rgba(255, 69, 0, 0.4)';
+  card.style.boxShadow = '0 25px 80px rgba(255, 69, 0, 0.3), inset 0 0 50px rgba(255, 69, 0, 0.1)';
+  card.style.fontFamily = '"Arial Black", "Arial Bold", Arial, sans-serif';
+  card.style.animation = 'glowPulse 2s ease-in-out infinite';
+
+  const title = document.createElement('div');
+  title.textContent = 'GAME OVER';
+  title.style.fontSize = '48px';
+  title.style.fontWeight = '900';
+  title.style.marginBottom = '25px';
+  title.style.letterSpacing = '3px';
+  title.style.textTransform = 'uppercase';
+  title.style.background = 'linear-gradient(135deg, #ff4500, #ff0000, #cc0000)';
+  title.style.WebkitBackgroundClip = 'text';
+  title.style.WebkitTextFillColor = 'transparent';
+  title.style.textShadow = '0 0 30px rgba(255, 69, 0, 0.5)';
+
+  const body = document.createElement('div');
+  body.textContent = "You've ran Out of time.";
+  body.style.fontSize = '22px';
+  body.style.lineHeight = '1.8';
+  body.style.marginBottom = '30px';
+  body.style.color = '#ffcccc';
+  body.style.textShadow = '0 2px 10px rgba(0, 0, 0, 0.5)';
+
+  const btn = document.createElement('button');
+  btn.textContent = 'RESTART GAME';
+  btn.style.cursor = 'pointer';
+  btn.style.padding = '16px 40px';
+  btn.style.fontSize = '20px';
+  btn.style.fontWeight = '900';
+  btn.style.border = 'none';
+  btn.style.borderRadius = '12px';
+  btn.style.background = 'linear-gradient(135deg, #ff4500, #ff6b00)';
+  btn.style.color = '#fff';
+  btn.style.letterSpacing = '2px';
+  btn.style.textTransform = 'uppercase';
+  btn.style.boxShadow = '0 0 20px rgba(255, 69, 0, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3)';
+  btn.style.transition = 'all 0.3s ease';
+  
+  btn.addEventListener('mouseenter', () => {
+    btn.style.animation = 'buttonPulse 2s ease-in-out infinite';
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.animation = 'none';
+  });
+  
+  btn.addEventListener('click', () => {
+    // Clear all game state and redirect to index.html
+    localStorage.removeItem('gameTimer');
+    localStorage.removeItem('gameState');
+    localStorage.removeItem('signatures');
+    window.location.href = 'index.html';
+  });
+
+  card.appendChild(title);
+  card.appendChild(body);
+  card.appendChild(btn);
   overlay.appendChild(card);
   document.body.appendChild(overlay);
 }

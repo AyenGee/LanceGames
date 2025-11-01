@@ -80,6 +80,7 @@ function getSignatureCount() { return readSignatures().size; }
 let timeMsTotal = 180000;
 let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
 let timerPaused = false;
+let gameEnded = false;
 function formatTime(ms) { const totalSec = Math.max(0, Math.ceil(ms / 1000)); const m = Math.floor(totalSec / 60).toString().padStart(2, '0'); const s = (totalSec % 60).toString().padStart(2, '0'); return `${m}:${s}`; }
 
 // Consistent HUD (progress bar like main.js)
@@ -310,6 +311,8 @@ let planeObject = null; // Floor named Plane004
 let hasTeleportedToWest = false; // prevent multiple redirects
 let line211Mesh = null; // teleporter back to west
 let labHumanMesh = null; // the NPC in labs that grants the final signature
+const obstacles = []; // Array to store obstacle collision boxes
+let lastCharacterPosition = new THREE.Vector3(); // For collision detection
 
 loader.load("models/labs.glb", (gltf) => {
     environment = gltf.scene;
@@ -332,7 +335,24 @@ loader.load("models/labs.glb", (gltf) => {
         // Find teleporter back to west; adjust name if needed in the model
         if (obj.name === 'Line211') line211Mesh = obj;
         if (obj.name === 'Human') labHumanMesh = obj; // final signature in labs
+        
+        // Collect obstacles for collision detection (Plane*, Cube*, Desk* but NOT Plane004)
+        if (obj.isMesh) {
+            const objName = obj.name;
+            if (objName === 'Plane004') {
+                // Skip Plane004 (floor)
+                return;
+            }
+            if (objName.startsWith('Plane') || objName.startsWith('Cube') || objName.startsWith('Desk')) {
+                obj.updateMatrixWorld(true);
+                const box = new THREE.Box3().setFromObject(obj);
+                obstacles.push({ name: objName, box: box, mesh: obj });
+                console.log(`✅ Added obstacle collision box for: ${objName}`);
+            }
+        }
     });
+    
+    console.log(`✅ Total obstacles collected: ${obstacles.length}`);
     if (planeObject) {
         const planeBox = new THREE.Box3().setFromObject(planeObject);
         console.log(`✅ Plane004 found. Y max=${planeBox.max.y.toFixed(2)}`);
@@ -404,6 +424,9 @@ loader.load("models/Soldier.glb", (gltf) => {
         console.log(`📏 Heights (on load) → Soldier Y=${playerModel.position.y.toFixed(2)} | Plane004 Y=n/a`);
     }
     
+    // Initialize lastCharacterPosition for collision detection
+    lastCharacterPosition.copy(playerModel.position);
+    
     scene.add(playerModel);
 
     const mixer = new THREE.AnimationMixer(playerModel);
@@ -436,6 +459,44 @@ document.addEventListener('keydown', (e) => {
     if (e.key.toLowerCase() === CAMERA_TOGGLE_KEY) toggleCameraMode();
 });
 
+// === Collision Detection ===
+function checkCollisions() {
+    if (!playerModel) return;
+    
+    const currentPosition = playerModel.position.clone();
+    
+    // Clamp character Y position to floor Plane004 if exists
+    if (planeObject) {
+        const planeBox = new THREE.Box3().setFromObject(planeObject);
+        const minY = planeBox.max.y;
+        if (playerModel.position.y < minY) {
+            playerModel.position.y = minY;
+        }
+    }
+    
+    // Get collision box (character in third-person, camera proxy in first-person)
+    const collisionBox = isFirstPerson
+        ? new THREE.Box3().setFromCenterAndSize(
+            camera.position.clone(),
+            new THREE.Vector3(0.6, 1.8, 0.6)
+        )
+        : new THREE.Box3().setFromObject(playerModel);
+    
+    // Check collision with obstacles (buildings)
+    for (const obstacle of obstacles) {
+        const currentBox = obstacle.box;
+        if (collisionBox.intersectsBox(currentBox)) {
+            // Collision with obstacle - revert to last valid position
+            playerModel.position.copy(lastCharacterPosition);
+            console.log(`⚠️ Collision with ${obstacle.name} - movement blocked`);
+            return; // Exit early to prevent further movement
+        }
+    }
+    
+    // Update last valid position if no obstacle collision
+    lastCharacterPosition.copy(currentPosition);
+}
+
 // === Animate ===
 const clock = new THREE.Clock();
 function animate() {
@@ -460,6 +521,11 @@ function animate() {
             camera.position.copy(controls.target.clone().add(toCam));
         }
         controls.update();
+    }
+
+    // Check collision with obstacles (bounce back if hitting walls/objects)
+    if (playerModel && obstacles.length > 0) {
+        checkCollisions();
     }
 
     // Collect final signature from labs Human
@@ -492,13 +558,111 @@ function animate() {
         }
     }
     // Timer update & persist
-    if (!timerPaused) {
+    if (!timerPaused && !gameEnded) {
         timeMsLeft -= dt * 1000;
-        if (timeMsLeft <= 0) { timeMsLeft = 0; timerPaused = true; }
+        if (timeMsLeft <= 0) { 
+            timeMsLeft = 0; 
+            timerPaused = true;
+            gameEnded = true;
+            persistTimerState(timeMsLeft, false);
+            showGameOverOverlay();
+        }
         updateHUD();
         persistTimerState(timeMsLeft, true);
     }
     renderer.render(scene, camera);
+}
+
+// Game Over overlay (when time runs out)
+function showGameOverOverlay() {
+    // Add CSS animations if not exists
+    if (!document.getElementById('overlay-animations')) {
+        const style = document.createElement('style');
+        style.id = 'overlay-animations';
+        style.textContent = `
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes glowPulse { 0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 69, 0, 0.5)); } 50% { filter: drop-shadow(0 0 20px rgba(255, 140, 0, 1)); } }
+            @keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 168, 107, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 200, 150, 0.8); } }
+        `;
+        document.head.appendChild(style);
+    }
+
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.inset = '0';
+    overlay.style.background = 'radial-gradient(circle at center, rgba(150, 0, 0, 0.3), rgba(0, 0, 0, 0.95))';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.zIndex = '10001';
+    overlay.style.animation = 'fadeIn 0.3s ease-in';
+
+    const card = document.createElement('div');
+    card.style.maxWidth = '850px';
+    card.style.margin = '20px';
+    card.style.background = 'linear-gradient(145deg, rgba(80, 20, 20, 0.95), rgba(40, 10, 10, 0.98))';
+    card.style.padding = '40px 50px';
+    card.style.borderRadius = '20px';
+    card.style.border = '3px solid rgba(255, 69, 0, 0.4)';
+    card.style.boxShadow = '0 25px 80px rgba(255, 69, 0, 0.3), inset 0 0 50px rgba(255, 69, 0, 0.1)';
+    card.style.fontFamily = '"Arial Black", "Arial Bold", Arial, sans-serif';
+    card.style.animation = 'glowPulse 2s ease-in-out infinite';
+
+    const title = document.createElement('div');
+    title.textContent = 'GAME OVER';
+    title.style.fontSize = '48px';
+    title.style.fontWeight = '900';
+    title.style.marginBottom = '25px';
+    title.style.letterSpacing = '3px';
+    title.style.textTransform = 'uppercase';
+    title.style.background = 'linear-gradient(135deg, #ff4500, #ff0000, #cc0000)';
+    title.style.WebkitBackgroundClip = 'text';
+    title.style.WebkitTextFillColor = 'transparent';
+    title.style.textShadow = '0 0 30px rgba(255, 69, 0, 0.5)';
+
+    const body = document.createElement('div');
+    body.textContent = "You've ran Out of time.";
+    body.style.fontSize = '22px';
+    body.style.lineHeight = '1.8';
+    body.style.marginBottom = '30px';
+    body.style.color = '#ffcccc';
+    body.style.textShadow = '0 2px 10px rgba(0, 0, 0, 0.5)';
+
+    const btn = document.createElement('button');
+    btn.textContent = 'RESTART GAME';
+    btn.style.cursor = 'pointer';
+    btn.style.padding = '16px 40px';
+    btn.style.fontSize = '20px';
+    btn.style.fontWeight = '900';
+    btn.style.border = 'none';
+    btn.style.borderRadius = '12px';
+    btn.style.background = 'linear-gradient(135deg, #ff4500, #ff6b00)';
+    btn.style.color = '#fff';
+    btn.style.letterSpacing = '2px';
+    btn.style.textTransform = 'uppercase';
+    btn.style.boxShadow = '0 0 20px rgba(255, 69, 0, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3)';
+    btn.style.transition = 'all 0.3s ease';
+    
+    btn.addEventListener('mouseenter', () => {
+        btn.style.animation = 'buttonPulse 2s ease-in-out infinite';
+    });
+    btn.addEventListener('mouseleave', () => {
+        btn.style.animation = 'none';
+    });
+    
+    btn.addEventListener('click', () => {
+        // Clear all game state and redirect to index.html
+        localStorage.removeItem('gameTimer');
+        localStorage.removeItem('gameState');
+        localStorage.removeItem('signatures');
+        window.location.href = 'index.html';
+    });
+
+    card.appendChild(title);
+    card.appendChild(body);
+    card.appendChild(btn);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
 }
 
 animate();

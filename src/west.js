@@ -11,6 +11,7 @@ let yaw = 0;
 let pitch = 0;
 let gamePaused = null;
 let gameStarted = null;
+let gameEnded = false;
 
 // === HUD SETUP (Your existing HUD code) ===
 const hud = document.createElement('div');
@@ -242,6 +243,117 @@ document.addEventListener('pointerlockchange', () => {
 });
 // === END HUD ===
 
+/* =========================
+   ARRIVAL OVERLAY
+========================= */
+gamePaused = true;
+(function setupArrivalOverlay() {
+  // Add CSS animations if not exists
+  if (!document.getElementById('overlay-animations')) {
+    const style = document.createElement('style');
+    style.id = 'overlay-animations';
+    style.textContent = `
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes glowPulse { 0%, 100% { filter: drop-shadow(0 0 10px rgba(0, 200, 255, 0.5)); } 50% { filter: drop-shadow(0 0 20px rgba(0, 255, 255, 1)); } }
+      @keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 168, 107, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 200, 150, 0.8); } }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const overlay = document.createElement('div');
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    inset: '0',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'radial-gradient(circle at center, rgba(100, 50, 150, 0.3), rgba(0, 0, 0, 0.95))',
+    color: '#fff',
+    fontFamily: '"Arial Black", "Arial Bold", Arial, sans-serif',
+    textAlign: 'center',
+    padding: '24px',
+    zIndex: '10000',
+    animation: 'fadeIn 0.3s ease-in',
+  });
+
+  const card = document.createElement('div');
+  Object.assign(card.style, {
+    maxWidth: '900px',
+    margin: '20px',
+    background: 'linear-gradient(145deg, rgba(50, 30, 80, 0.95), rgba(20, 10, 40, 0.98))',
+    padding: '40px 50px',
+    borderRadius: '20px',
+    border: '3px solid rgba(150, 100, 255, 0.4)',
+    boxShadow: '0 25px 80px rgba(150, 100, 255, 0.3), inset 0 0 50px rgba(150, 100, 255, 0.1)',
+    fontFamily: 'inherit',
+    animation: 'glowPulse 2s ease-in-out infinite',
+  });
+
+  const title = document.createElement('div');
+  Object.assign(title.style, {
+    fontSize: '36px',
+    fontWeight: '900',
+    marginBottom: '25px',
+    letterSpacing: '3px',
+    textTransform: 'uppercase',
+    background: 'linear-gradient(135deg, #ff00ff, #9d4edd, #7b2cbf)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    textShadow: '0 0 30px rgba(150, 100, 255, 0.5)',
+  });
+  title.textContent = 'Great Job!';
+
+  const text = document.createElement('div');
+  Object.assign(text.style, {
+    maxWidth: '720px',
+    lineHeight: '1.8',
+    fontSize: '18px',
+    marginBottom: '30px',
+    whiteSpace: 'pre-line',
+    color: '#e0d0ff',
+    textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
+  });
+  text.textContent = 'Great job of the previous state\n\nNow it seems that you still require 3 signatures. Find the Lecturers to get your signatures.\n\n2 lecturers are in the place you are and the other is in the labs.\n\nAfter finding them a "OFFICE " sign will show up on one of the gates. them you will be able to go to the offices.\n\nAll the best.';
+
+  const btn = document.createElement('button');
+  btn.textContent = 'CONTINUE';
+  Object.assign(btn.style, {
+    cursor: 'pointer',
+    padding: '16px 40px',
+    fontSize: '20px',
+    fontWeight: '900',
+    border: 'none',
+    borderRadius: '12px',
+    background: 'linear-gradient(135deg, #00a86b, #00d4aa)',
+    color: '#fff',
+    letterSpacing: '2px',
+    textTransform: 'uppercase',
+    boxShadow: '0 0 20px rgba(0, 168, 107, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3)',
+    transition: 'all 0.3s ease',
+    animation: 'buttonPulse 2s ease-in-out infinite',
+  });
+  btn.addEventListener('mouseenter', () => {
+    btn.style.animation = 'buttonPulse 2s ease-in-out infinite';
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.animation = 'none';
+  });
+  
+  btn.addEventListener('click', () => {
+    gamePaused = false;
+    gameStarted = true;
+    setButtonsState();
+
+    overlay.remove();
+  });
+
+  card.appendChild(title);
+  card.appendChild(text);
+  card.appendChild(btn);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+})();
 
 // === SCENE SETUP ===
 const scene = new THREE.Scene();
@@ -605,14 +717,14 @@ function createHereMarkersForNPC(npcMesh) {
             depthWrite: false,
             blending: THREE.AdditiveBlending
         });
-        const sprite = new THREE.Sprite(material);
-        sprite.scale.set(0.8, 0.8, 0.8);
-        return sprite;
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(2, 2, 2);
+    return sprite;
     }
 
     const letters = ['H','E','R','E'];
     const color = '#66ccff';
-    const spacing = 0.7;
+    const spacing = 1.2;
     const totalWidth = spacing * (letters.length - 1);
     letters.forEach((ch, i) => {
         const s = makeLetterSprite(ch, color);
@@ -621,7 +733,7 @@ function createHereMarkersForNPC(npcMesh) {
     });
 
     // Add a small point light to act as a light source hint
-    const light = new THREE.PointLight(0x66ccff, 0.8, 6, 2.0);
+    const light = new THREE.PointLight(0x66ccff, 1.2, 12, 2.0);
     light.position.set(0, 0, 0);
     group.add(light);
 
@@ -670,7 +782,7 @@ function createPortalLabel(mesh, text) {
             blending: THREE.AdditiveBlending
         });
         const sprite = new THREE.Sprite(material);
-        sprite.scale.set(2.2, 1.1, 1.0);
+        sprite.scale.set(3.5, 2.0, 1.0);
         return sprite;
     }
 
@@ -680,7 +792,7 @@ function createPortalLabel(mesh, text) {
     group.add(sprite);
 
     // Light for emphasis
-    const light = new THREE.PointLight(0xffcc66, 0.7, 6, 2.0);
+    const light = new THREE.PointLight(0xffcc66, 1.2, 12, 2.0);
     group.add(light);
 
     // Initial placement: in front of mesh and slightly above top
@@ -743,47 +855,165 @@ function showMessage(text) {
 function showCongratsOverlay(text) {
 	const existing = document.getElementById('congrats-overlay');
 	if (existing) existing.remove();
+	
+	// Add CSS animations if not exists
+	if (!document.getElementById('overlay-animations')) {
+		const style = document.createElement('style');
+		style.id = 'overlay-animations';
+		style.textContent = `
+			@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+			@keyframes glowPulse { 0%, 100% { filter: drop-shadow(0 0 10px rgba(0, 200, 255, 0.5)); } 50% { filter: drop-shadow(0 0 20px rgba(0, 255, 255, 1)); } }
+			@keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 168, 107, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 200, 150, 0.8); } }
+		`;
+		document.head.appendChild(style);
+	}
+	
 	const overlay = document.createElement('div');
 	overlay.id = 'congrats-overlay';
 	overlay.style.position = 'fixed';
 	overlay.style.inset = '0';
-	overlay.style.background = 'rgba(0,0,0,0.75)';
+	overlay.style.background = 'radial-gradient(circle at center, rgba(100, 50, 150, 0.3), rgba(0, 0, 0, 0.95))';
 	overlay.style.display = 'flex';
 	overlay.style.alignItems = 'center';
 	overlay.style.justifyContent = 'center';
 	overlay.style.zIndex = '10001';
+	overlay.style.animation = 'fadeIn 0.3s ease-in';
 
 	const card = document.createElement('div');
-	card.style.maxWidth = '720px';
+	card.style.maxWidth = '900px';
 	card.style.margin = '20px';
-	card.style.background = 'linear-gradient(135deg, rgba(20,20,20,0.95), rgba(35,35,35,0.95))';
+	card.style.background = 'linear-gradient(145deg, rgba(50, 30, 80, 0.95), rgba(20, 10, 40, 0.98))';
 	card.style.color = '#fff';
-	card.style.padding = '28px 32px';
-	card.style.borderRadius = '14px';
-	card.style.boxShadow = '0 20px 60px rgba(0,0,0,0.6)';
-	card.style.fontFamily = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+	card.style.padding = '40px 50px';
+	card.style.borderRadius = '20px';
+	card.style.border = '3px solid rgba(150, 100, 255, 0.4)';
+	card.style.boxShadow = '0 25px 80px rgba(150, 100, 255, 0.3), inset 0 0 50px rgba(150, 100, 255, 0.1)';
+	card.style.fontFamily = '"Arial Black", "Arial Bold", Arial, sans-serif';
+	card.style.animation = 'glowPulse 2s ease-in-out infinite';
 
 	const title = document.createElement('div');
-	title.textContent = 'Great!';
-	title.style.fontSize = '28px';
-	title.style.fontWeight = '800';
-	title.style.marginBottom = '10px';
+	title.textContent = 'Excellent!';
+	title.style.fontSize = '36px';
+	title.style.fontWeight = '900';
+	title.style.marginBottom = '25px';
+	title.style.letterSpacing = '3px';
+	title.style.textTransform = 'uppercase';
+	title.style.background = 'linear-gradient(135deg, #00ff00, #00d466, #00a86b)';
+	title.style.WebkitBackgroundClip = 'text';
+	title.style.WebkitTextFillColor = 'transparent';
+	title.style.textShadow = '0 0 30px rgba(0, 255, 0, 0.5)';
 
 	const body = document.createElement('div');
-	body.style.fontSize = '16px';
-	body.style.lineHeight = '1.7';
-	body.style.opacity = '0.95';
+	body.style.fontSize = '18px';
+	body.style.lineHeight = '1.8';
+	body.style.color = '#e0d0ff';
+	body.style.textShadow = '0 2px 10px rgba(0, 0, 0, 0.5)';
 	body.textContent = text;
 
 	const hint = document.createElement('div');
 	hint.textContent = 'Teleporting to the maze...';
-	hint.style.marginTop = '16px';
-	hint.style.opacity = '0.8';
-	hint.style.fontSize = '14px';
+	hint.style.marginTop = '25px';
+	hint.style.opacity = '0.9';
+	hint.style.fontSize = '16px';
+	hint.style.fontWeight = '700';
+	hint.style.color = '#ffcc66';
+	hint.style.textShadow = '0 0 15px rgba(255, 204, 102, 0.6)';
 
 	card.appendChild(title);
 	card.appendChild(body);
 	card.appendChild(hint);
+	overlay.appendChild(card);
+	document.body.appendChild(overlay);
+}
+
+// Game Over overlay (when time runs out)
+function showGameOverOverlay() {
+	// Add CSS animations if not exists
+	if (!document.getElementById('overlay-animations')) {
+		const style = document.createElement('style');
+		style.id = 'overlay-animations';
+		style.textContent = `
+			@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+			@keyframes glowPulse { 0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 69, 0, 0.5)); } 50% { filter: drop-shadow(0 0 20px rgba(255, 140, 0, 1)); } }
+			@keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 168, 107, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 200, 150, 0.8); } }
+		`;
+		document.head.appendChild(style);
+	}
+
+	const overlay = document.createElement('div');
+	overlay.style.position = 'fixed';
+	overlay.style.inset = '0';
+	overlay.style.background = 'radial-gradient(circle at center, rgba(150, 0, 0, 0.3), rgba(0, 0, 0, 0.95))';
+	overlay.style.display = 'flex';
+	overlay.style.alignItems = 'center';
+	overlay.style.justifyContent = 'center';
+	overlay.style.zIndex = '10001';
+	overlay.style.animation = 'fadeIn 0.3s ease-in';
+
+	const card = document.createElement('div');
+	card.style.maxWidth = '850px';
+	card.style.margin = '20px';
+	card.style.background = 'linear-gradient(145deg, rgba(80, 20, 20, 0.95), rgba(40, 10, 10, 0.98))';
+	card.style.padding = '40px 50px';
+	card.style.borderRadius = '20px';
+	card.style.border = '3px solid rgba(255, 69, 0, 0.4)';
+	card.style.boxShadow = '0 25px 80px rgba(255, 69, 0, 0.3), inset 0 0 50px rgba(255, 69, 0, 0.1)';
+	card.style.fontFamily = '"Arial Black", "Arial Bold", Arial, sans-serif';
+	card.style.animation = 'glowPulse 2s ease-in-out infinite';
+
+	const title = document.createElement('div');
+	title.textContent = 'GAME OVER';
+	title.style.fontSize = '48px';
+	title.style.fontWeight = '900';
+	title.style.marginBottom = '25px';
+	title.style.letterSpacing = '3px';
+	title.style.textTransform = 'uppercase';
+	title.style.background = 'linear-gradient(135deg, #ff4500, #ff0000, #cc0000)';
+	title.style.WebkitBackgroundClip = 'text';
+	title.style.WebkitTextFillColor = 'transparent';
+	title.style.textShadow = '0 0 30px rgba(255, 69, 0, 0.5)';
+
+	const body = document.createElement('div');
+	body.textContent = "You've ran Out of time.";
+	body.style.fontSize = '22px';
+	body.style.lineHeight = '1.8';
+	body.style.marginBottom = '30px';
+	body.style.color = '#ffcccc';
+	body.style.textShadow = '0 2px 10px rgba(0, 0, 0, 0.5)';
+
+	const btn = document.createElement('button');
+	btn.textContent = 'RESTART GAME';
+	btn.style.cursor = 'pointer';
+	btn.style.padding = '16px 40px';
+	btn.style.fontSize = '20px';
+	btn.style.fontWeight = '900';
+	btn.style.border = 'none';
+	btn.style.borderRadius = '12px';
+	btn.style.background = 'linear-gradient(135deg, #ff4500, #ff6b00)';
+	btn.style.color = '#fff';
+	btn.style.letterSpacing = '2px';
+	btn.style.textTransform = 'uppercase';
+	btn.style.boxShadow = '0 0 20px rgba(255, 69, 0, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3)';
+	btn.style.transition = 'all 0.3s ease';
+	
+	btn.addEventListener('mouseenter', () => {
+		btn.style.animation = 'buttonPulse 2s ease-in-out infinite';
+	});
+	btn.addEventListener('mouseleave', () => {
+		btn.style.animation = 'none';
+	});
+	
+	btn.addEventListener('click', () => {
+		// Clear all game state and redirect to index.html
+		localStorage.removeItem('gameTimer');
+		localStorage.removeItem('gameState');
+		localStorage.removeItem('signatures');
+		window.location.href = 'index.html';
+	});
+
+	card.appendChild(title);
+	card.appendChild(body);
+	card.appendChild(btn);
 	overlay.appendChild(card);
 	document.body.appendChild(overlay);
 }
@@ -942,7 +1172,7 @@ function checkCollisions() {
 		if (collisionBox.intersectsBox(glassBox)) {
 			hasTeleportedToFinal = true;
 			showCongratsOverlay(
-				'Great. you have all the reports and signatures.  recently Robin has been pissed at you students so he created a maze system such that it is a little harder for all of you to find his office. ALL THE BEST FINDING IT IN TIME!!.'
+				'Great Job on getting your signatures in time. Now headed to offices.'
 			);
 			persistTimerState(timeMsLeft, false);
 			setTimeout(() => { window.location.href = 'final.html'; }, 2500);
@@ -1077,9 +1307,15 @@ function animate() {
     }
 
     // Timer update & persist (throttled)
-    if (!timerPaused) {
+    if (!timerPaused && !gameEnded) {
         timeMsLeft -= delta * 1000;
-        if (timeMsLeft <= 0) { timeMsLeft = 0; timerPaused = true; }
+        if (timeMsLeft <= 0) { 
+            timeMsLeft = 0; 
+            timerPaused = true;
+            gameEnded = true;
+            persistTimerState(timeMsLeft, false);
+            showGameOverOverlay();
+        }
         updateHUD();
         persistThrottle += delta;
         if (persistThrottle >= 1.0) {
