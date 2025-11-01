@@ -149,6 +149,56 @@ function updateHUD() {
 }
 updateHUD();
 
+/* =========================
+   ARRIVAL OVERLAY
+========================= */
+(function setupArrivalOverlay() {
+  const overlay = document.createElement('div');
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    inset: '0',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(0,0,0,0.7)',
+    color: '#fff',
+    fontFamily: 'sans-serif',
+    textAlign: 'center',
+    padding: '24px',
+    zIndex: '10000',
+  });
+
+  const text = document.createElement('div');
+  Object.assign(text.style, {
+    maxWidth: '720px',
+    lineHeight: '1.6',
+    fontSize: '18px',
+    marginBottom: '16px',
+    whiteSpace: 'pre-line',
+  });
+  text.textContent = 'Great. you have all the reports and signatures.  recently Rueben has been pissed at you students so he created a maze system such that it is a little harder for all of you to find his office. ALL THE BEST FINDING IT IN TIME!!.';
+
+  const btn = document.createElement('button');
+  btn.textContent = 'CONTINUE';
+  Object.assign(btn.style, {
+    cursor: 'pointer',
+    padding: '10px 18px',
+    fontSize: '16px',
+    border: 'none',
+    borderRadius: '6px',
+    background: '#00a86b',
+    color: '#fff',
+  });
+  btn.addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  overlay.appendChild(text);
+  overlay.appendChild(btn);
+  document.body.appendChild(overlay);
+})();
+
 // Load final scene and capture Plane
 loader.load('models/final.glb', (gltf) => {
   const env = gltf.scene;

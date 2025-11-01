@@ -996,7 +996,7 @@ function checkCollisions() {
 		if (collisionBox.intersectsBox(glassBox)) {
 			hasTeleportedToFinal = true;
 			showCongratsOverlay(
-				'Great. you have all the reports and signatures.  recently Robin has been pissed at you students so he created a maze system such that it is a little harder for all of you to find his office. ALL THE BEST FINDING IT IN TIME!!.'
+				'Great Job on getting your signatures in time. Now headed to offices.'
 			);
 			persistTimerState(timeMsLeft, false);
 			setTimeout(() => { window.location.href = 'final.html'; }, 2500);
