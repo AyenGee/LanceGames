@@ -338,12 +338,112 @@ setupMessageOverlay(); // Call it once
 // === Start Screen (Instructions) === (Keep your existing setupStartOverlay function)
 // ... (paste setupStartOverlay function here) ...
 function setupStartOverlay() {
-    const overlay = document.createElement('div'); overlay.id = 'start-overlay';
-    const text = document.createElement('div'); text.className = 'start-text'; text.textContent = 'Find the report and submit it before time runs out. NOTE, there are multiple challenges in the way. PLAY!';
-    const btn = document.createElement('button'); btn.className = 'start-btn'; btn.textContent = 'PLAY';
-    btn.addEventListener('click', () => { gameStarted = true; gameEnded = false; timeMsLeft = timeMsTotal; persistTimerState(true); overlay.remove(); });
-    overlay.appendChild(text); overlay.appendChild(btn); document.body.appendChild(overlay);
-    setupHUD(); // Make sure HUD is set up when game starts
+    // Add CSS animations if not exists
+    if (!document.getElementById('overlay-animations')) {
+        const style = document.createElement('style');
+        style.id = 'overlay-animations';
+        style.textContent = `
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes glowPulse { 0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); } 50% { filter: drop-shadow(0 0 20px rgba(255, 255, 0, 1)); } }
+            @keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 168, 107, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 200, 150, 0.8); } }
+        `;
+        document.head.appendChild(style);
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'start-overlay';
+    Object.assign(overlay.style, {
+        position: 'fixed',
+        inset: '0',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'radial-gradient(circle at center, rgba(255, 165, 0, 0.2), rgba(0, 0, 0, 0.95))',
+        color: '#fff',
+        fontFamily: '"Arial Black", "Arial Bold", Arial, sans-serif',
+        textAlign: 'center',
+        padding: '24px',
+        zIndex: '10000',
+        animation: 'fadeIn 0.3s ease-in',
+    });
+
+    const card = document.createElement('div');
+    Object.assign(card.style, {
+        maxWidth: '850px',
+        margin: '20px',
+        background: 'linear-gradient(145deg, rgba(80, 50, 20, 0.95), rgba(40, 25, 10, 0.98))',
+        padding: '40px 50px',
+        borderRadius: '20px',
+        border: '3px solid rgba(255, 215, 0, 0.4)',
+        boxShadow: '0 25px 80px rgba(255, 215, 0, 0.3), inset 0 0 50px rgba(255, 215, 0, 0.1)',
+        fontFamily: 'inherit',
+        animation: 'glowPulse 2s ease-in-out infinite',
+    });
+
+    const title = document.createElement('div');
+    Object.assign(title.style, {
+        fontSize: '38px',
+        fontWeight: '900',
+        marginBottom: '25px',
+        letterSpacing: '3px',
+        textTransform: 'uppercase',
+        background: 'linear-gradient(135deg, #ffd700, #ffaa00, #ff8c00)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        textShadow: '0 0 30px rgba(255, 215, 0, 0.5)',
+    });
+    title.textContent = 'Mission Briefing';
+
+    const text = document.createElement('div');
+    Object.assign(text.style, {
+        maxWidth: '720px',
+        lineHeight: '1.8',
+        fontSize: '18px',
+        marginBottom: '30px',
+        color: '#ffe0cc',
+        textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
+    });
+    text.textContent = 'Find the report and submit it before time runs out. NOTE, there are multiple challenges in the way.';
+
+    const btn = document.createElement('button');
+    btn.textContent = 'START MISSION';
+    Object.assign(btn.style, {
+        cursor: 'pointer',
+        padding: '16px 40px',
+        fontSize: '20px',
+        fontWeight: '900',
+        border: 'none',
+        borderRadius: '12px',
+        background: 'linear-gradient(135deg, #00a86b, #00d4aa)',
+        color: '#fff',
+        letterSpacing: '2px',
+        textTransform: 'uppercase',
+        boxShadow: '0 0 20px rgba(0, 168, 107, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3)',
+        transition: 'all 0.3s ease',
+    });
+    
+    btn.addEventListener('mouseenter', () => {
+        btn.style.animation = 'buttonPulse 2s ease-in-out infinite';
+    });
+    btn.addEventListener('mouseleave', () => {
+        btn.style.animation = 'none';
+    });
+    
+    btn.addEventListener('click', () => {
+        gameStarted = true;
+        gameEnded = false;
+        timeMsLeft = timeMsTotal;
+        persistTimerState(true);
+        overlay.remove();
+        setupHUD(); // Make sure HUD is set up when game starts
+    });
+
+    card.appendChild(title);
+    card.appendChild(text);
+    card.appendChild(btn);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
 }
 //----------------------------------
 // === Collectibles: Reports ===
