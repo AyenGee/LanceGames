@@ -220,27 +220,8 @@ rstBtn.addEventListener('click', () => {
 });
 setButtonsState();
 
-// Pointer Lock for immersive mouse look (requested only in first-person mode)
-document.body.addEventListener('click', () => {
-// ... (your pointer lock code) ...
-    if (!renderer) return;
-    // Only attempt pointer lock when in first-person and not already locked
-    if (isFirstPerson && document.pointerLockElement !== renderer.domElement) {
-        try {
-            renderer.domElement.requestPointerLock();
-        } catch (e) {
-            console.warn('Pointer lock request failed:', e);
-        }
-    }
-});
-
-document.addEventListener('pointerlockchange', () => {
-// ... (your pointer lock code) ...
-    if (!renderer) return;
-    const locked = document.pointerLockElement === renderer.domElement;
-    // Disable OrbitControls while locked to avoid pointer capture conflicts
-    orbitControls.enabled = !locked && !isFirstPerson ? true : !locked;
-});
+// Pointer Lock for immersive mouse look (will be set up after renderer is created)
+// Event listeners are set up later in the code after renderer is initialized
 // === END HUD ===
 
 /* =========================
@@ -381,30 +362,100 @@ scene.add(mapCamera);
 
 // Camera (Main)
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-// Audio listener and footstep sound
+
+// === LOADING MANAGER FOR OPTIMIZED LOADING (must be defined before use) ===
+const loadingManager = new THREE.LoadingManager();
+let loadingProgress = 0;
+let totalItems = 0;
+let loadedItems = 0;
+
+// Loading screen overlay
+const loadingOverlay = document.createElement('div');
+Object.assign(loadingOverlay.style, {
+  position: 'fixed',
+  inset: '0',
+  background: 'rgba(0, 0, 0, 0.9)',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: '100000',
+  color: '#fff',
+  fontFamily: 'sans-serif'
+});
+
+const loadingText = document.createElement('div');
+loadingText.textContent = 'Loading...';
+loadingText.style.fontSize = '24px';
+loadingText.style.marginBottom = '20px';
+
+const loadingBarContainer = document.createElement('div');
+loadingBarContainer.style.width = '400px';
+loadingBarContainer.style.height = '20px';
+loadingBarContainer.style.background = 'rgba(255, 255, 255, 0.1)';
+loadingBarContainer.style.borderRadius = '10px';
+loadingBarContainer.style.overflow = 'hidden';
+
+const loadingBar = document.createElement('div');
+loadingBar.style.width = '0%';
+loadingBar.style.height = '100%';
+loadingBar.style.background = 'linear-gradient(90deg, #00a86b, #00d4aa)';
+loadingBar.style.transition = 'width 0.3s ease';
+
+loadingBarContainer.appendChild(loadingBar);
+loadingOverlay.appendChild(loadingText);
+loadingOverlay.appendChild(loadingBarContainer);
+document.body.appendChild(loadingOverlay);
+
+loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+  loadedItems = itemsLoaded;
+  totalItems = itemsTotal;
+  loadingProgress = (itemsLoaded / itemsTotal) * 100;
+  loadingBar.style.width = `${loadingProgress}%`;
+  loadingText.textContent = `Loading... ${Math.round(loadingProgress)}%`;
+};
+
+// Audio listener and footstep sound (deferred loading - load after critical assets)
 const listener = new THREE.AudioListener();
 camera.add(listener);
 const audioLoader = new THREE.AudioLoader();
 const footstepSound = new THREE.Audio(listener);
-audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', function(buffer) {
-    footstepSound.setBuffer(buffer);
-    footstepSound.setLoop(true);
-    footstepSound.setVolume(0.5);
-});
-
 const collectSound = new THREE.Audio(listener);
-audioLoader.load('assets/collect2.mp3', function(buffer) {
-    collectSound.setBuffer(buffer);
-    collectSound.setLoop(false);
-    collectSound.setVolume(0.7);
-});
-
 const loserSound = new THREE.Audio(listener);
-audioLoader.load('assets/loser.mp3', function(buffer) {
-    loserSound.setBuffer(buffer);
-    loserSound.setLoop(false);
-    loserSound.setVolume(0.8);
-});
+
+// Load audio files after critical assets have loaded (deferred)
+function loadAudioAssets() {
+    audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', function(buffer) {
+        footstepSound.setBuffer(buffer);
+        footstepSound.setLoop(true);
+        footstepSound.setVolume(0.5);
+    }, undefined, undefined);
+
+    audioLoader.load('assets/collect2.mp3', function(buffer) {
+        collectSound.setBuffer(buffer);
+        collectSound.setLoop(false);
+        collectSound.setVolume(0.7);
+    }, undefined, undefined);
+
+    audioLoader.load('assets/loser.mp3', function(buffer) {
+        loserSound.setBuffer(buffer);
+        loserSound.setLoop(false);
+        loserSound.setVolume(0.8);
+    }, undefined, undefined);
+}
+
+// Handle loading completion - load audio and hide loading screen
+loadingManager.onLoad = () => {
+    // Load audio assets after visual assets are done (non-blocking)
+    loadAudioAssets();
+    
+    // Hide loading overlay after a short delay
+    setTimeout(() => {
+        loadingOverlay.style.opacity = '0';
+        loadingOverlay.style.transition = 'opacity 0.5s';
+        setTimeout(() => loadingOverlay.remove(), 500);
+    }, 300);
+};
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -434,6 +485,26 @@ const savedCameraRotation = new THREE.Euler();
 // Orbit controls (third-person mode)
 const orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.enableDamping = true;
+
+// Pointer Lock for immersive mouse look (now that renderer and orbitControls are initialized)
+document.body.addEventListener('click', () => {
+    if (!renderer) return;
+    // Only attempt pointer lock when in first-person and not already locked
+    if (isFirstPerson && document.pointerLockElement !== renderer.domElement) {
+        try {
+            renderer.domElement.requestPointerLock();
+        } catch (e) {
+            console.warn('Pointer lock request failed:', e);
+        }
+    }
+});
+
+document.addEventListener('pointerlockchange', () => {
+    if (!renderer) return;
+    const locked = document.pointerLockElement === renderer.domElement;
+    // Disable OrbitControls while locked to avoid pointer capture conflicts
+    orbitControls.enabled = !locked && !isFirstPerson ? true : !locked;
+});
 
 // === Shared Timer (Persistent Across Pages) ===
 const TIMER_KEY = 'gameTimer';
@@ -536,17 +607,19 @@ scene.add(fillLight);
 // Optional: Add fog for depth perception in outdoor scene
 scene.fog = new THREE.Fog(0x87CEEB, 100, 300); // Sky blue fog
 
-// Background
+// Background (deferred loading - set simple color first, load texture after critical assets)
+scene.background = new THREE.Color(0x87CEEB); // Sky blue as fallback
 const textureLoader = new THREE.TextureLoader();
-textureLoader.load('models/sky.jpeg', (texture) => {
-    texture.encoding = THREE.sRGBEncoding;
-    scene.background = texture;
-});
+// Load sky texture after a delay to prioritize critical assets
+setTimeout(() => {
+    textureLoader.load('models/sky.jpeg', (texture) => {
+        texture.encoding = THREE.sRGBEncoding;
+        scene.background = texture;
+    }, undefined, undefined);
+}, 1000); // Defer by 1 second to allow models to load first
 
-
-// === LOAD ENVIRONMENT (Your existing code) ===
-// ... (no changes needed) ...
-const loader = new GLTFLoader();
+// === LOAD ENVIRONMENT (Optimized with LoadingManager) ===
+const loader = new GLTFLoader(loadingManager);
 let environment;
 let planeObject = null;
 let characterModel = null;
@@ -563,6 +636,7 @@ const portalLabels = [];
 let officeLabelCreated = false; // Create OFFICE label once when 3 signatures are collected
 let allSignaturesAnnounced = false; // Track if "You can now go to the OFFICES" message has been shown
 
+// Load environment and character in parallel
 loader.load("models/west.glb", (gltf) => {
     environment = gltf.scene;
     scene.add(environment);
@@ -643,29 +717,29 @@ loader.load("models/west.glb", (gltf) => {
 });
 
 
-// === LOAD CHARACTER (Your existing code) ===
-// ... (no changes needed) ...
+// === LOAD CHARACTER (Load in parallel with environment) ===
 let characterControls;
 
+// Start loading character immediately (in parallel with environment)
 loader.load("models/Soldier.glb", (gltf) => {
-    const model = gltf.scene;
-    model.scale.set(2, 2, 2);
-    model.castShadow = true;
+    const model = gltf.scene;
+    model.scale.set(2, 2, 2);
+    model.castShadow = true;
     // Keep soldier hidden until environment is ready
     model.visible = environmentLoaded;
-    scene.add(model);
+    scene.add(model);
 
-    characterModel = model;
+    characterModel = model;
 
     if (planeObject) positionCharacterOnPlane();
     else model.position.set(0, 2, 3);
-    
-    // Initialize last character position for collision detection
-    lastCharacterPosition.copy(model.position);
+    
+    // Initialize last character position for collision detection
+    lastCharacterPosition.copy(model.position);
 
-    const mixer = new THREE.AnimationMixer(model);
-    const animationsMap = new Map();
-    gltf.animations.forEach(clip => animationsMap.set(clip.name, mixer.clipAction(clip)));
+    const mixer = new THREE.AnimationMixer(model);
+    const animationsMap = new Map();
+    gltf.animations.forEach(clip => animationsMap.set(clip.name, mixer.clipAction(clip)));
 
     characterControls = new CharacterControls(model, mixer, animationsMap, orbitControls, camera, "Idle", footstepSound);
 });
