@@ -418,7 +418,7 @@ function setupStartOverlay() {
         color: '#ffe0cc',
         textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
     });
-    text.textContent = 'Find the report and submit it before time runs out. NOTE, there are multiple challenges in the way.';
+    text.textContent = 'Find the report and submit it before time runs out. NOTE, there are multiple challenges in the way. Please scroll down';
 
     const btn = document.createElement('button');
     btn.textContent = 'START MISSION';
