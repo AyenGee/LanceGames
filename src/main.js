@@ -491,14 +491,14 @@ export function setupHUD() {
     });
 
     const ctrlBtn = document.createElement('button');
-    ctrlBtn.className = 'ctrl-btn';
+    ctrlBtn.className = 'btn btn-ctrl';
     ctrlBtn.textContent = '⌨ CONTROLS';
     const controlsPanel = document.createElement('div');
     controlsPanel.id = 'controls-panel';
     controlsPanel.className = 'controls-panel is-hidden';
     controlsPanel.setAttribute('role', 'dialog');
     controlsPanel.setAttribute('aria-modal', 'false');
-    controlsPanel.innerHTML = `<div class="controls-panel__header"><strong>Game Controls</strong><button class="controls-panel__close" aria-label="Close controls">✕</button></div><ul class="controls-panel__list"><li><kbd>W/A/S/D</kbd> or <kbd>Arrow Keys</kbd> — Move</li><li><kbd>Space</kbd> — Action / Interact</li><li><kbd>Shift</kbd> — Sprint</li><li><kbd>P</kbd> — Pause</li><li><kbd>M</kbd> — Mute/Unmute</li><li><kbd>?</kbd> — Toggle Controls</li></ul>`;
+    controlsPanel.innerHTML = `<div class="controls-panel__header"><strong>Game Controls</strong></div><ul class="controls-panel__list"><li><kbd>W/A/S/D</kbd> or <kbd>Arrow Keys</kbd> — Move</li><li><kbd>Space</kbd> — Action / Interact</li><li><kbd>Shift</kbd> — Sprint</li><li><kbd>P</kbd> — Pause</li><li><kbd>M</kbd> — Mute/Unmute</li><li><kbd>?</kbd> — Toggle Controls</li></ul>`;
     const closeBtn = controlsPanel.querySelector('.controls-panel__close');
     const toggleControls = (forceState) => {
         const isHidden = controlsPanel.classList.contains('is-hidden');
@@ -506,8 +506,11 @@ export function setupHUD() {
         controlsPanel.classList.toggle('is-hidden', !shouldOpen);
         ctrlBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
     };
-    ctrlBtn.addEventListener('click', () => toggleControls());
-    closeBtn.addEventListener('click', () => toggleControls(false));
+    ctrlBtn.addEventListener('click', () => {if(controlsPanel.hidden){
+        controlsPanel.hidden = false;
+    }else{
+        controlsPanel.hidden = true;
+    }});
     document.addEventListener('keydown', (e) => {
         if (e.key === '?' || (e.shiftKey && e.key === '/')) toggleControls();
         if (e.key === 'Escape') toggleControls(false);
