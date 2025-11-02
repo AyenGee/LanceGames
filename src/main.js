@@ -652,9 +652,9 @@ function updateHUD() {
 
 spawnPapers(); // Call after scene setup
 
-// === Load Environment === (Keep existing loader code)
-// ... (paste environment loader code here) ...
+// === Load Environment (Optimized with LoadingManager) ===
 const loader = new GLTFLoader(manager); let environment, obstacles = [], teleportTarget;
+// Load environment and character in parallel
 loader.load("models/Gamestates.glb", (gltf) => {
     environment = gltf.scene; scene.add(environment);
     environment.traverse((child) => {
@@ -673,9 +673,9 @@ loader.load("models/Gamestates.glb", (gltf) => {
 });
 //----------------------------------
 
-// === Load Soldier === (Keep existing loader code)
-// ... (paste soldier loader code here) ...
+// === Load Soldier (Load in parallel with environment) ===
 let characterControls;
+// Start loading character immediately (in parallel with environment)
 loader.load("models/Soldier.glb", (gltf) => {
     const model = gltf.scene; model.scale.set(1, 1, 1); model.position.set(0, 0.1, 3); scene.add(model);
     const mixer = new THREE.AnimationMixer(model); const animationsMap = new Map();

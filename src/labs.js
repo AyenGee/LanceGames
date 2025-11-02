@@ -457,8 +457,68 @@ function setShadowFlags(object3d) {
     });
 }
 
-// === Load Labs Environment ===
-const loader = new GLTFLoader();
+// === LOADING MANAGER FOR OPTIMIZED LOADING ===
+const loadingManager = new THREE.LoadingManager();
+let loadingProgress = 0;
+let totalItems = 0;
+let loadedItems = 0;
+
+// Loading screen overlay
+const loadingOverlay = document.createElement('div');
+Object.assign(loadingOverlay.style, {
+  position: 'fixed',
+  inset: '0',
+  background: 'rgba(0, 0, 0, 0.9)',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: '100000',
+  color: '#fff',
+  fontFamily: 'sans-serif'
+});
+
+const loadingText = document.createElement('div');
+loadingText.textContent = 'Loading...';
+loadingText.style.fontSize = '24px';
+loadingText.style.marginBottom = '20px';
+
+const loadingBarContainer = document.createElement('div');
+loadingBarContainer.style.width = '400px';
+loadingBarContainer.style.height = '20px';
+loadingBarContainer.style.background = 'rgba(255, 255, 255, 0.1)';
+loadingBarContainer.style.borderRadius = '10px';
+loadingBarContainer.style.overflow = 'hidden';
+
+const loadingBar = document.createElement('div');
+loadingBar.style.width = '0%';
+loadingBar.style.height = '100%';
+loadingBar.style.background = 'linear-gradient(90deg, #00a86b, #00d4aa)';
+loadingBar.style.transition = 'width 0.3s ease';
+
+loadingBarContainer.appendChild(loadingBar);
+loadingOverlay.appendChild(loadingText);
+loadingOverlay.appendChild(loadingBarContainer);
+document.body.appendChild(loadingOverlay);
+
+loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+  loadedItems = itemsLoaded;
+  totalItems = itemsTotal;
+  loadingProgress = (itemsLoaded / itemsTotal) * 100;
+  loadingBar.style.width = `${loadingProgress}%`;
+  loadingText.textContent = `Loading... ${Math.round(loadingProgress)}%`;
+};
+
+loadingManager.onLoad = () => {
+  setTimeout(() => {
+    loadingOverlay.style.opacity = '0';
+    loadingOverlay.style.transition = 'opacity 0.5s';
+    setTimeout(() => loadingOverlay.remove(), 500);
+  }, 300);
+};
+
+// === Load Labs Environment (Optimized with LoadingManager) ===
+const loader = new GLTFLoader(loadingManager);
 let environment;
 let playerModel = null;
 let playerStart = null;
@@ -470,6 +530,7 @@ const obstacles = []; // Array to store obstacle collision boxes
 let lastCharacterPosition = new THREE.Vector3(); // For collision detection
 let allSignaturesAnnounced = false; // Track if "You can now go to the OFFICES" message has been shown
 
+// Load environment and character in parallel
 loader.load("models/labs.glb", (gltf) => {
     environment = gltf.scene;
     setShadowFlags(environment);
@@ -559,9 +620,10 @@ function findByNameDeep(root, nameLower) {
     return found;
 }
 
-// === Load Character ===
+// === Load Character (Load in parallel with environment) ===
 let characterControls = null;
 
+// Start loading character immediately (in parallel with environment)
 loader.load("models/Soldier.glb", (gltf) => {
     playerModel = gltf.scene;
     setShadowFlags(playerModel);

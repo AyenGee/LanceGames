@@ -525,9 +525,61 @@ controls.dampingFactor = 0.06;
 controls.target.set(0, 1, 0);
 
 /* =========================
-   LOADER / WORLD
+   LOADER / WORLD (OPTIMIZED)
 ========================= */
-const loader = new GLTFLoader();
+// === LOADING MANAGER FOR OPTIMIZED LOADING ===
+const loadingManager = new THREE.LoadingManager();
+let loadingProgress = 0;
+let totalItems = 0;
+let loadedItems = 0;
+
+// Loading screen overlay
+const loadingOverlay = document.createElement('div');
+Object.assign(loadingOverlay.style, {
+  position: 'fixed',
+  inset: '0',
+  background: 'rgba(0, 0, 0, 0.9)',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: '100000',
+  color: '#fff',
+  fontFamily: 'sans-serif'
+});
+
+const loadingText = document.createElement('div');
+loadingText.textContent = 'Loading...';
+loadingText.style.fontSize = '24px';
+loadingText.style.marginBottom = '20px';
+
+const loadingBarContainer = document.createElement('div');
+loadingBarContainer.style.width = '400px';
+loadingBarContainer.style.height = '20px';
+loadingBarContainer.style.background = 'rgba(255, 255, 255, 0.1)';
+loadingBarContainer.style.borderRadius = '10px';
+loadingBarContainer.style.overflow = 'hidden';
+
+const loadingBar = document.createElement('div');
+loadingBar.style.width = '0%';
+loadingBar.style.height = '100%';
+loadingBar.style.background = 'linear-gradient(90deg, #00a86b, #00d4aa)';
+loadingBar.style.transition = 'width 0.3s ease';
+
+loadingBarContainer.appendChild(loadingBar);
+loadingOverlay.appendChild(loadingText);
+loadingOverlay.appendChild(loadingBarContainer);
+document.body.appendChild(loadingOverlay);
+
+loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+  loadedItems = itemsLoaded;
+  totalItems = itemsTotal;
+  loadingProgress = (itemsLoaded / itemsTotal) * 100;
+  loadingBar.style.width = `${loadingProgress}%`;
+  loadingText.textContent = `Loading... ${Math.round(loadingProgress)}%`;
+};
+
+const loader = new GLTFLoader(loadingManager);
 
 // Vehicle templates & lanes
 let carTemplates = [];
@@ -588,30 +640,45 @@ loader.load(
   (err) => console.error('Failed to load carcross.glb', err)
 );
 
+// Audio setup (deferred loading - load after critical assets)
 const audioLoader = new THREE.AudioLoader();
 const backgroundMusic = new THREE.Audio(listener);
-audioLoader.load('assets/ES_Medium, Town Road - Epidemic Sound.mp3', function(buffer) {
-    backgroundMusic.setBuffer(buffer);
-    backgroundMusic.setLoop(true);
-    backgroundMusic.setVolume(0.3); // Set a lower volume for BGM
-    backgroundMusic.play(); // <-- Play it as soon as it's loaded
-});
-audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', function(buffer) {
-    footstepSound.setBuffer(buffer);
-    footstepSound.setLoop(true);
-    footstepSound.setVolume(0.5);
-    // Note: Do not play() here, the controls class will do it.
-});
 const footstepSound = new THREE.Audio(listener);
-
 const loserSound = new THREE.Audio(listener);
-audioLoader.load('assets/loser.mp3', function(buffer) {
-    loserSound.setBuffer(buffer);
-    loserSound.setLoop(false);
-    loserSound.setVolume(0.8);
-});
 
-/* Load Environment */
+// Load audio files after critical assets have loaded (deferred)
+function loadAudioAssets() {
+    audioLoader.load('assets/ES_Medium, Town Road - Epidemic Sound.mp3', function(buffer) {
+        backgroundMusic.setBuffer(buffer);
+        backgroundMusic.setLoop(true);
+        backgroundMusic.setVolume(0.3);
+        backgroundMusic.play();
+    }, undefined, undefined);
+
+    audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', function(buffer) {
+        footstepSound.setBuffer(buffer);
+        footstepSound.setLoop(true);
+        footstepSound.setVolume(0.5);
+    }, undefined, undefined);
+
+    audioLoader.load('assets/loser.mp3', function(buffer) {
+        loserSound.setBuffer(buffer);
+        loserSound.setLoop(false);
+        loserSound.setVolume(0.8);
+    }, undefined, undefined);
+}
+
+// Start loading audio after visual assets are done
+loadingManager.onLoad = () => {
+    loadAudioAssets();
+    setTimeout(() => {
+        loadingOverlay.style.opacity = '0';
+        loadingOverlay.style.transition = 'opacity 0.5s';
+        setTimeout(() => loadingOverlay.remove(), 500);
+    }, 300);
+};
+
+/* Load Environment (load in parallel with character) */
 loader.load(
   'models/scene.glb',
   (gltf) => {
@@ -724,11 +791,12 @@ loader.load(
   (err) => console.error('Failed to load environment scene.glb', err)
 );
 
-/* Load Character */
+/* Load Character (load in parallel with environment) */
 let characterControls = null;
 let playerModel = null;
 let playerStart = null;
 
+// Start loading character immediately (in parallel with environment)
 loader.load(
   'models/Soldier.glb',
   (gltf) => {

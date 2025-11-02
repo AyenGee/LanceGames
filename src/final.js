@@ -20,39 +20,43 @@ document.body.appendChild(renderer.domElement);
 // Camera
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 3, 6);
-// Audio listener and footstep sound
+// Audio listener and footstep sound (deferred loading - load after critical assets)
 const listener = new THREE.AudioListener();
 camera.add(listener);
 const audioLoader = new THREE.AudioLoader();
 const footstepSound = new THREE.Audio(listener);
-audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', function(buffer) {
-  footstepSound.setBuffer(buffer);
-  footstepSound.setLoop(true);
-  footstepSound.setVolume(0.5);
-});
-
 const winnerSound = new THREE.Audio(listener);
-audioLoader.load('assets/winner.mp3', function(buffer) {
-  winnerSound.setBuffer(buffer);
-  winnerSound.setLoop(false);
-  winnerSound.setVolume(0.8);
-});
-
 const loserSound = new THREE.Audio(listener);
-audioLoader.load('assets/loser.mp3', function(buffer) {
-  loserSound.setBuffer(buffer);
-  loserSound.setLoop(false);
-  loserSound.setVolume(0.8);
-});
-
-// Background music: Superhero Story 1 - Fredrik Ekstrom
 const backgroundMusic = new THREE.Audio(listener);
-audioLoader.load('assets/ES_Superhero Story 1 - Fredrik Ekstrom.mp3', function(buffer) {
-  backgroundMusic.setBuffer(buffer);
-  backgroundMusic.setLoop(true);
-  backgroundMusic.setVolume(0.25);
-  try { backgroundMusic.play(); } catch {}
-});
+
+// Load audio files after critical assets have loaded (deferred)
+function loadAudioAssets() {
+    audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', function(buffer) {
+        footstepSound.setBuffer(buffer);
+        footstepSound.setLoop(true);
+        footstepSound.setVolume(0.5);
+    }, undefined, undefined);
+
+    audioLoader.load('assets/winner.mp3', function(buffer) {
+        winnerSound.setBuffer(buffer);
+        winnerSound.setLoop(false);
+        winnerSound.setVolume(0.8);
+    }, undefined, undefined);
+
+    audioLoader.load('assets/loser.mp3', function(buffer) {
+        loserSound.setBuffer(buffer);
+        loserSound.setLoop(false);
+        loserSound.setVolume(0.8);
+    }, undefined, undefined);
+
+    // Background music: Superhero Story 1 - Fredrik Ekstrom
+    audioLoader.load('assets/ES_Superhero Story 1 - Fredrik Ekstrom.mp3', function(buffer) {
+        backgroundMusic.setBuffer(buffer);
+        backgroundMusic.setLoop(true);
+        backgroundMusic.setVolume(0.25);
+        try { backgroundMusic.play(); } catch {}
+    }, undefined, undefined);
+}
 
 // Controls
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -71,8 +75,71 @@ sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 scene.add(sun);
 
+// === LOADING MANAGER FOR OPTIMIZED LOADING ===
+const loadingManager = new THREE.LoadingManager();
+let loadingProgress = 0;
+let totalItems = 0;
+let loadedItems = 0;
+
+// Loading screen overlay
+const loadingOverlay = document.createElement('div');
+Object.assign(loadingOverlay.style, {
+  position: 'fixed',
+  inset: '0',
+  background: 'rgba(0, 0, 0, 0.9)',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: '100000',
+  color: '#fff',
+  fontFamily: 'sans-serif'
+});
+
+const loadingText = document.createElement('div');
+loadingText.textContent = 'Loading...';
+loadingText.style.fontSize = '24px';
+loadingText.style.marginBottom = '20px';
+
+const loadingBarContainer = document.createElement('div');
+loadingBarContainer.style.width = '400px';
+loadingBarContainer.style.height = '20px';
+loadingBarContainer.style.background = 'rgba(255, 255, 255, 0.1)';
+loadingBarContainer.style.borderRadius = '10px';
+loadingBarContainer.style.overflow = 'hidden';
+
+const loadingBar = document.createElement('div');
+loadingBar.style.width = '0%';
+loadingBar.style.height = '100%';
+loadingBar.style.background = 'linear-gradient(90deg, #00a86b, #00d4aa)';
+loadingBar.style.transition = 'width 0.3s ease';
+
+loadingBarContainer.appendChild(loadingBar);
+loadingOverlay.appendChild(loadingText);
+loadingOverlay.appendChild(loadingBarContainer);
+document.body.appendChild(loadingOverlay);
+
+loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+  loadedItems = itemsLoaded;
+  totalItems = itemsTotal;
+  loadingProgress = (itemsLoaded / itemsTotal) * 100;
+  loadingBar.style.width = `${loadingProgress}%`;
+  loadingText.textContent = `Loading... ${Math.round(loadingProgress)}%`;
+};
+
+loadingManager.onLoad = () => {
+    // Load audio assets after visual assets are done (non-blocking)
+    loadAudioAssets();
+    
+    setTimeout(() => {
+        loadingOverlay.style.opacity = '0';
+        loadingOverlay.style.transition = 'opacity 0.5s';
+        setTimeout(() => loadingOverlay.remove(), 500);
+    }, 300);
+};
+
 // Loaders
-const loader = new GLTFLoader();
+const loader = new GLTFLoader(loadingManager);
 
 // Refs
 let planeObject = null;
@@ -271,7 +338,7 @@ updateHUD();
   document.body.appendChild(overlay);
 })();
 
-// Load final scene and capture Plane
+// Load final scene and capture Plane (load in parallel with character)
 loader.load('models/final.glb', (gltf) => {
   const env = gltf.scene;
   env.scale.set(SCENE_SCALE, SCENE_SCALE, SCENE_SCALE);
@@ -312,7 +379,8 @@ loader.load('models/final.glb', (gltf) => {
   
 }, undefined, (err) => console.error('Failed to load final.glb', err));
 
-// Load Soldier and place on Plane top
+// Load Soldier and place on Plane top (load in parallel with environment)
+// Start loading character immediately (in parallel with environment)
 loader.load('models/Soldier.glb', (gltf) => {
   playerModel = gltf.scene;
   playerModel.traverse((obj) => {
