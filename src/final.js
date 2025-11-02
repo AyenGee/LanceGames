@@ -119,6 +119,16 @@ loadingOverlay.appendChild(loadingText);
 loadingOverlay.appendChild(loadingBarContainer);
 document.body.appendChild(loadingOverlay);
 
+// Pause timer during loading
+loadingManager.onStart = () => {
+  // Ensure timer is paused while loading
+  timerPaused = true;
+  gamePaused = true;
+  gameStarted = false;
+  // Persist paused state so timer doesn't count down during loading
+  persistTimerState(timeMsLeft, false);
+};
+
 loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
   loadedItems = itemsLoaded;
   totalItems = itemsTotal;
@@ -171,9 +181,12 @@ function readPersistedTimer() {
 function persistTimerState(timeMsLeft, running) {
   try { localStorage.setItem(TIMER_KEY, JSON.stringify({ timeMsLeft, lastUpdate: Date.now(), running: !!running })); } catch {}
 }
-let timeMsTotal = 180000;
+let timeMsTotal = 300000; // 5 minutes (increased from 3 minutes)
 let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
 let gameEnded = false;
+let gameStarted = false;
+let gamePaused = true; // Start paused until CONTINUE is clicked
+let timerPaused = true; // Start paused during loading
 let persistThrottle = 0;
 
 // === HUD (match design used in west.js) ===
@@ -328,6 +341,11 @@ updateHUD();
   });
   
   btn.addEventListener('click', () => {
+    // Resume timer when player clicks CONTINUE
+    timerPaused = false;
+    gameStarted = true;
+    gamePaused = false;
+    persistTimerState(timeMsLeft, true);
     overlay.remove();
   });
 
@@ -414,7 +432,8 @@ const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
-  if (!gameEnded) {
+  // Only count down timer if game has started and is not paused
+  if (!gameEnded && !timerPaused && gameStarted && !gamePaused) {
     // Decrement and persist timer (throttled)
     timeMsLeft -= dt * 1000;
     if (timeMsLeft <= 0) {

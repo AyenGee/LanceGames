@@ -146,6 +146,12 @@ const MIN_LOAD_MS = 4000;
 manager.onStart = function () {
     if (progressBar) progressBar.style.width = '0%';
     loadStart = performance.now();
+    
+    // Pause timer during loading
+    gamePaused = true;
+    gameStarted = false;
+    // Persist paused state so timer doesn't count down during loading
+    persistTimerState(timeMsLeft, false);
 };
 manager.onProgress = function (_url, itemsLoaded, itemsTotal) {
     if (!progressBar || !itemsTotal) return;
@@ -547,7 +553,7 @@ function persistTimerState(running) {
 }
 
 // === HUD (rich controls) ===
-let hudEl = null; let hudTextEl = null; let pauseBtn = null; let playBtn = null; let timeMsTotal = 180 * 1000; let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal); let gameEnded = false; let gamePaused = false;
+let hudEl = null; let hudTextEl = null; let pauseBtn = null; let playBtn = null; let timeMsTotal = 300 * 1000; // 5 minutes (increased from 3 minutes) let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal); let gameEnded = false; let gamePaused = false;
 export function setupHUD() {
     // Main HUD container
     hudEl = document.createElement('div');

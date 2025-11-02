@@ -33,7 +33,7 @@ function readPersistedTimer() {
 function persistTimerState(timeMsLeft, running) {
   try { localStorage.setItem(TIMER_KEY, JSON.stringify({ timeMsLeft, lastUpdate: Date.now(), running: !!running })); } catch {}
 }
-let timeMsTotal = 180000;
+let timeMsTotal = 300000; // 5 minutes (increased from 3 minutes)
 let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
 let gameStarted = false;
 let gamePaused = false;
@@ -571,6 +571,15 @@ loadingOverlay.appendChild(loadingText);
 loadingOverlay.appendChild(loadingBarContainer);
 document.body.appendChild(loadingOverlay);
 
+// Pause timer during loading
+loadingManager.onStart = () => {
+  // Ensure timer is paused while loading
+  gamePaused = true;
+  gameStarted = false;
+  // Persist paused state so timer doesn't count down during loading
+  persistTimerState(timeMsLeft, false);
+};
+
 loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
   loadedItems = itemsLoaded;
   totalItems = itemsTotal;
@@ -671,6 +680,11 @@ function loadAudioAssets() {
 // Start loading audio after visual assets are done
 loadingManager.onLoad = () => {
     loadAudioAssets();
+    
+    // Timer stays paused until player clicks "START MISSION" in arrival overlay
+    // This ensures loading time doesn't count against the player
+    // Timer will resume when gamePaused = false and gameStarted = true (which is already handled)
+    
     setTimeout(() => {
         loadingOverlay.style.opacity = '0';
         loadingOverlay.style.transition = 'opacity 0.5s';

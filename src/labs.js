@@ -91,10 +91,12 @@ function persistSignatures(sigSet) {
     try { localStorage.setItem(SIGN_KEY, JSON.stringify(Array.from(sigSet))); } catch {}
 }
 function getSignatureCount() { return readSignatures().size; }
-let timeMsTotal = 180000;
+let timeMsTotal = 300000; // 5 minutes (increased from 3 minutes)
 let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
 let timerPaused = false;
 let gameEnded = false;
+let gameStarted = false;
+let gamePaused = true; // Start paused until CONTINUE is clicked
 function formatTime(ms) { const totalSec = Math.max(0, Math.ceil(ms / 1000)); const m = Math.floor(totalSec / 60).toString().padStart(2, '0'); const s = (totalSec % 60).toString().padStart(2, '0'); return `${m}:${s}`; }
 
 // Consistent HUD (progress bar like main.js)
@@ -245,6 +247,11 @@ setupHUD();
     });
     
     btn.addEventListener('click', () => {
+        // Resume timer when player clicks CONTINUE
+        timerPaused = false;
+        gameStarted = true;
+        gamePaused = false;
+        persistTimerState(timeMsLeft, true);
         overlay.remove();
     });
 
@@ -501,6 +508,16 @@ loadingOverlay.appendChild(loadingText);
 loadingOverlay.appendChild(loadingBarContainer);
 document.body.appendChild(loadingOverlay);
 
+// Pause timer during loading
+loadingManager.onStart = () => {
+  // Ensure timer is paused while loading
+  timerPaused = true;
+  gamePaused = true;
+  gameStarted = false;
+  // Persist paused state so timer doesn't count down during loading
+  persistTimerState(timeMsLeft, false);
+};
+
 loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
   loadedItems = itemsLoaded;
   totalItems = itemsTotal;
@@ -510,6 +527,10 @@ loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
 };
 
 loadingManager.onLoad = () => {
+  // Timer stays paused until player clicks "CONTINUE" in arrival overlay
+  // This ensures loading time doesn't count against the player
+  // Timer will resume when player clicks CONTINUE (handled in arrival overlay)
+  
   setTimeout(() => {
     loadingOverlay.style.opacity = '0';
     loadingOverlay.style.transition = 'opacity 0.5s';
@@ -790,8 +811,8 @@ function animate() {
             return;
         }
     }
-    // Timer update & persist
-    if (!timerPaused && !gameEnded) {
+    // Timer update & persist (only when game has started and is not paused)
+    if (!timerPaused && !gameEnded && gameStarted && !gamePaused) {
         timeMsLeft -= dt * 1000;
         if (timeMsLeft <= 0) { 
             timeMsLeft = 0; 

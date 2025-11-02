@@ -324,6 +324,9 @@ gamePaused = true;
   btn.addEventListener('click', () => {
     gamePaused = false;
     gameStarted = true;
+    // Resume timer now that game has started
+    timerPaused = false;
+    persistTimerState(timeMsLeft, true);
     setButtonsState();
 
     overlay.remove();
@@ -407,6 +410,16 @@ loadingOverlay.appendChild(loadingText);
 loadingOverlay.appendChild(loadingBarContainer);
 document.body.appendChild(loadingOverlay);
 
+// Pause timer during loading
+loadingManager.onStart = () => {
+  // Ensure timer is paused while loading
+  timerPaused = true;
+  gamePaused = true;
+  gameStarted = false;
+  // Persist paused state so timer doesn't count down during loading
+  persistTimerState(timeMsLeft, false);
+};
+
 loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
   loadedItems = itemsLoaded;
   totalItems = itemsTotal;
@@ -448,6 +461,10 @@ function loadAudioAssets() {
 loadingManager.onLoad = () => {
     // Load audio assets after visual assets are done (non-blocking)
     loadAudioAssets();
+    
+    // Timer stays paused until player clicks "CONTINUE" in arrival overlay
+    // This ensures loading time doesn't count against the player
+    // Timer will resume when gamePaused = false and gameStarted = true
     
     // Hide loading overlay after a short delay
     setTimeout(() => {
@@ -547,7 +564,7 @@ try {
     const reportsCounterEl = document.getElementById('reports-counter');
     if (reportsCounterEl) reportsCounterEl.textContent = `${getSignatureCount()}/3`;
 } catch {}
-let timeMsTotal = 180000;
+let timeMsTotal = 300000; // 5 minutes (increased from 3 minutes)
 let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
 let timerPaused = false;
 let persistThrottle = 0; // throttle localStorage writes to ~1/sec
