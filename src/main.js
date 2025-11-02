@@ -8,9 +8,51 @@ try { if (console && typeof console.log === 'function') console.log = () => {}; 
 
 // === Scene Setup ===
 const scene = new THREE.Scene();
-let gameStarted = false;
 const listener = new THREE.AudioListener();
 //const audioLoader = new THREE.AudioLoader(manager);
+
+// === Timer Persistence Helpers (must be before loading manager) ===
+const TIMER_KEY = 'gameTimer';
+function readPersistedTimer() {
+    try {
+        const raw = localStorage.getItem(TIMER_KEY);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || typeof obj.timeMsLeft !== 'number') return null;
+        
+        // Detect if timer is from old 3-minute system (max was 180000)
+        // If it is, clear it and use new 5-minute total to avoid issues
+        if (obj.timeMsLeft <= 180000) {
+            localStorage.removeItem(TIMER_KEY); // Clear old timer
+            return null; // Use new timeMsTotal (fresh 5 minutes)
+        }
+        
+        const last = typeof obj.lastUpdate === 'number' ? obj.lastUpdate : Date.now();
+        const running = !!obj.running;
+        let left = obj.timeMsLeft;
+        if (running) {
+            const delta = Date.now() - last;
+            left = Math.max(0, left - delta);
+        }
+        // If saved time is expired, return null to use new timeMsTotal
+        if (left <= 0) {
+            return null; // Use new timeMsTotal (fresh 5 minutes)
+        }
+        return { timeMsLeft: left };
+    } catch { return null; }
+}
+function persistTimerState(running) {
+    try {
+        localStorage.setItem(TIMER_KEY, JSON.stringify({ timeMsLeft, lastUpdate: Date.now(), running: !!running }));
+    } catch {}
+}
+
+// === Game State Variables (declared early for use in loading manager) ===
+let gameStarted = false;
+let gameEnded = false;
+let gamePaused = false;
+let timeMsTotal = 300 * 1000; // 5 minutes (increased from 3 minutes)
+let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal);
 
 // === LOADING SCREEN (CSS-driven) ===
 let loadingOverlay;
@@ -453,6 +495,7 @@ function setupStartOverlay() {
     btn.addEventListener('click', () => {
         gameStarted = true;
         gameEnded = false;
+        gamePaused = false; // Resume game when player clicks START MISSION
         timeMsLeft = timeMsTotal;
         persistTimerState(true);
         overlay.remove();
@@ -528,32 +571,8 @@ function spawnPapers() {
 }
 //----------------------------------
 
-// === Timer Persistence Helpers ===
-const TIMER_KEY = 'gameTimer';
-function readPersistedTimer() {
-    try {
-        const raw = localStorage.getItem(TIMER_KEY);
-        if (!raw) return null;
-        const obj = JSON.parse(raw);
-        if (!obj || typeof obj.timeMsLeft !== 'number') return null;
-        const last = typeof obj.lastUpdate === 'number' ? obj.lastUpdate : Date.now();
-        const running = !!obj.running;
-        let left = obj.timeMsLeft;
-        if (running) {
-            const delta = Date.now() - last;
-            left = Math.max(0, left - delta);
-        }
-        return { timeMsLeft: left };
-    } catch { return null; }
-}
-function persistTimerState(running) {
-    try {
-        localStorage.setItem(TIMER_KEY, JSON.stringify({ timeMsLeft, lastUpdate: Date.now(), running: !!running }));
-    } catch {}
-}
-
 // === HUD (rich controls) ===
-let hudEl = null; let hudTextEl = null; let pauseBtn = null; let playBtn = null; let timeMsTotal = 300 * 1000; // 5 minutes (increased from 3 minutes) let timeMsLeft = (readPersistedTimer()?.timeMsLeft) ?? (timeMsTotal); let gameEnded = false; let gamePaused = false;
+let hudEl = null; let hudTextEl = null; let pauseBtn = null; let playBtn = null;
 export function setupHUD() {
     // Main HUD container
     hudEl = document.createElement('div');
