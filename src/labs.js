@@ -32,6 +32,20 @@ audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', f
     footstepSound.setVolume(0.5);
 });
 
+const collectSound = new THREE.Audio(listener);
+audioLoader.load('assets/collect2.mp3', function(buffer) {
+    collectSound.setBuffer(buffer);
+    collectSound.setLoop(false);
+    collectSound.setVolume(0.7);
+});
+
+const loserSound = new THREE.Audio(listener);
+audioLoader.load('assets/loser.mp3', function(buffer) {
+    loserSound.setBuffer(buffer);
+    loserSound.setLoop(false);
+    loserSound.setVolume(0.8);
+});
+
 // === Controls ===
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -397,6 +411,42 @@ softFillPoint.position.set(0, 4, 0);
 softFillPoint.castShadow = false;
 scene.add(softFillPoint);
 
+// === MESSAGE DISPLAY ===
+let messageTimeout = null;
+function showMessage(text) {
+    // Remove existing message if any
+    const existingMsg = document.getElementById('npc-message');
+    if (existingMsg) {
+        existingMsg.remove();
+        if (messageTimeout) clearTimeout(messageTimeout);
+    }
+    
+    // Create message element
+    const msg = document.createElement('div');
+    msg.id = 'npc-message';
+    msg.textContent = text;
+    msg.style.position = 'fixed';
+    msg.style.top = '50%';
+    msg.style.left = '50%';
+    msg.style.transform = 'translate(-50%, -50%)';
+    msg.style.background = 'rgba(0, 0, 0, 0.8)';
+    msg.style.color = '#fff';
+    msg.style.padding = '20px 40px';
+    msg.style.borderRadius = '10px';
+    msg.style.fontSize = '24px';
+    msg.style.fontFamily = 'sans-serif';
+    msg.style.zIndex = '10000';
+    msg.style.pointerEvents = 'none';
+    document.body.appendChild(msg);
+    
+    // Remove message after 3 seconds
+    messageTimeout = setTimeout(() => {
+        msg.style.opacity = '0';
+        msg.style.transition = 'opacity 0.5s';
+        setTimeout(() => msg.remove(), 500);
+    }, 3000);
+}
+
 // === Helper Functions ===
 function setShadowFlags(object3d) {
     object3d.traverse((obj) => {
@@ -418,6 +468,7 @@ let line211Mesh = null; // teleporter back to west
 let labHumanMesh = null; // the NPC in labs that grants the final signature
 const obstacles = []; // Array to store obstacle collision boxes
 let lastCharacterPosition = new THREE.Vector3(); // For collision detection
+let allSignaturesAnnounced = false; // Track if "You can now go to the OFFICES" message has been shown
 
 loader.load("models/labs.glb", (gltf) => {
     environment = gltf.scene;
@@ -643,9 +694,24 @@ function animate() {
             sigs.add(uniqueId);
             persistSignatures(sigs);
             const count = sigs.size;
+            
+            // Play collect sound
+            if (collectSound && collectSound.buffer) {
+                collectSound.stop(); // Stop any currently playing instance
+                collectSound.play();
+            }
+            
             const reportsCounterEl = document.getElementById('reports-counter');
             if (reportsCounterEl) reportsCounterEl.textContent = `${count}/3`;
             console.log(`✅ Signature recorded for ${uniqueId} → ${count}/3`);
+            
+            // Show message when all 3 signatures are collected
+            if (!allSignaturesAnnounced && count >= 3) {
+                allSignaturesAnnounced = true;
+                setTimeout(() => {
+                    showMessage('You can now go to the OFFICES');
+                }, 1500); // Show after a brief delay
+            }
         }
     }
 
@@ -670,11 +736,29 @@ function animate() {
             timerPaused = true;
             gameEnded = true;
             persistTimerState(timeMsLeft, false);
+            
+            // Play loser sound
+            if (loserSound && loserSound.buffer) {
+                loserSound.stop(); // Stop any currently playing instance
+                loserSound.play();
+            }
+            
             showGameOverOverlay();
         }
         updateHUD();
         persistTimerState(timeMsLeft, true);
     }
+    
+    // Show message if all 3 signatures are collected (even if player returns to labs)
+    if (!allSignaturesAnnounced && getSignatureCount() === 3) {
+        allSignaturesAnnounced = true;
+        // Only show if we're not currently showing another message
+        const existingMsg = document.getElementById('npc-message');
+        if (!existingMsg) {
+            showMessage('You can now go to the OFFICES');
+        }
+    }
+    
     renderer.render(scene, camera);
 }
 

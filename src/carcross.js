@@ -604,6 +604,13 @@ audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', f
 });
 const footstepSound = new THREE.Audio(listener);
 
+const loserSound = new THREE.Audio(listener);
+audioLoader.load('assets/loser.mp3', function(buffer) {
+    loserSound.setBuffer(buffer);
+    loserSound.setLoop(false);
+    loserSound.setVolume(0.8);
+});
+
 /* Load Environment */
 loader.load(
   'models/scene.glb',
@@ -1080,6 +1087,13 @@ renderer.setAnimationLoop(() => {
       gameEnded = true;
       setButtonsState();
       persistTimerState(timeMsLeft, false);
+      
+      // Play loser sound
+      if (loserSound && loserSound.buffer) {
+        loserSound.stop(); // Stop any currently playing instance
+        loserSound.play();
+      }
+      
       showGameOverOverlay();
     }
     updateHud();

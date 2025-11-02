@@ -193,6 +193,20 @@ audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', f
     // Note: Do not play() here, the controls class will do it.
 });
 
+const collectSound = new THREE.Audio(listener);
+audioLoader.load('assets/collect.mp3', function(buffer) {
+    collectSound.setBuffer(buffer);
+    collectSound.setLoop(false);
+    collectSound.setVolume(0.7);
+});
+
+const loserSound = new THREE.Audio(listener);
+audioLoader.load('assets/loser.mp3', function(buffer) {
+    loserSound.setBuffer(buffer);
+    loserSound.setLoop(false);
+    loserSound.setVolume(0.8);
+});
+
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.autoClear = false; // <-- Set autoClear to false HERE
@@ -689,6 +703,13 @@ function checkCollisions(character) {
         paperBoxes[i].setFromObject(p);
         if (charBox.intersectsBox(paperBoxes[i])) {
             p.userData.collected = true; reportsCollected++; updateHUD(); showMessage('Report found!');
+            
+            // Play collect sound
+            if (collectSound && collectSound.buffer) {
+                collectSound.stop(); // Stop any currently playing instance
+                collectSound.play();
+            }
+            
             scene.remove(p); p.geometry.dispose(); if (p.material.dispose) p.material.dispose(); papers[i] = null;
             
             // Remove label when paper is collected
@@ -788,6 +809,13 @@ function animate() {
             timeMsLeft = 0;
             gameEnded = true;
             gameStarted = false; // Stop game logic
+            
+            // Play loser sound
+            if (loserSound && loserSound.buffer) {
+                loserSound.stop(); // Stop any currently playing instance
+                loserSound.play();
+            }
+            
             showTimesUp();
         }
         updateHUD();

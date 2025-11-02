@@ -30,6 +30,21 @@ audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', f
   footstepSound.setLoop(true);
   footstepSound.setVolume(0.5);
 });
+
+const winnerSound = new THREE.Audio(listener);
+audioLoader.load('assets/winner.mp3', function(buffer) {
+  winnerSound.setBuffer(buffer);
+  winnerSound.setLoop(false);
+  winnerSound.setVolume(0.8);
+});
+
+const loserSound = new THREE.Audio(listener);
+audioLoader.load('assets/loser.mp3', function(buffer) {
+  loserSound.setBuffer(buffer);
+  loserSound.setLoop(false);
+  loserSound.setVolume(0.8);
+});
+
 // Background music: Superhero Story 1 - Fredrik Ekstrom
 const backgroundMusic = new THREE.Audio(listener);
 audioLoader.load('assets/ES_Superhero Story 1 - Fredrik Ekstrom.mp3', function(buffer) {
@@ -338,6 +353,13 @@ function animate() {
       timeMsLeft = 0;
       gameEnded = true;
       persistTimerState(timeMsLeft, false);
+      
+      // Play loser sound
+      if (loserSound && loserSound.buffer) {
+        loserSound.stop(); // Stop any currently playing instance
+        loserSound.play();
+      }
+      
       showGameOverOverlay();
     }
     updateHUD();
@@ -371,6 +393,13 @@ function animate() {
     if (charBox.intersectsBox(humanBox)) {
       gameEnded = true;
       persistTimerState(timeMsLeft, false);
+      
+      // Play winner sound
+      if (winnerSound && winnerSound.buffer) {
+        winnerSound.stop(); // Stop any currently playing instance
+        winnerSound.play();
+      }
+      
       showWinOverlay();
     }
   }

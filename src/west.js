@@ -392,6 +392,20 @@ audioLoader.load('assets/ES_Boots, Walking, Concrete 01 - Epidemic Sound.mp3', f
     footstepSound.setVolume(0.5);
 });
 
+const collectSound = new THREE.Audio(listener);
+audioLoader.load('assets/collect2.mp3', function(buffer) {
+    collectSound.setBuffer(buffer);
+    collectSound.setLoop(false);
+    collectSound.setVolume(0.7);
+});
+
+const loserSound = new THREE.Audio(listener);
+audioLoader.load('assets/loser.mp3', function(buffer) {
+    loserSound.setBuffer(buffer);
+    loserSound.setLoop(false);
+    loserSound.setVolume(0.8);
+});
+
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -547,6 +561,7 @@ const hereMarkers = [];
 // Floating labels for portals (e.g., LABS in front of portDoor)
 const portalLabels = [];
 let officeLabelCreated = false; // Create OFFICE label once when 3 signatures are collected
+let allSignaturesAnnounced = false; // Track if "You can now go to the OFFICES" message has been shown
 
 loader.load("models/west.glb", (gltf) => {
     environment = gltf.scene;
@@ -1212,10 +1227,25 @@ function checkCollisions() {
                             sigs.add(uniqueId);
                             persistSignatures(sigs);
                             const count = sigs.size;
+                            
+                            // Play collect sound
+                            if (collectSound && collectSound.buffer) {
+                                collectSound.stop(); // Stop any currently playing instance
+                                collectSound.play();
+                            }
+                            
                             showMessage(`Report signed (${count}/3)`);
                             const reportsCounterEl = document.getElementById('reports-counter');
                             if (reportsCounterEl) reportsCounterEl.textContent = `${count}/3`;
                             console.log(`✅ Signature recorded for ${uniqueId} → ${count}/3`);
+                            
+                            // Show message when all 3 signatures are collected
+                            if (!allSignaturesAnnounced && count >= 3) {
+                                allSignaturesAnnounced = true;
+                                setTimeout(() => {
+                                    showMessage('You can now go to the OFFICES');
+                                }, 1500); // Show after the "Report signed" message
+                            }
                         } else {
                             console.log(`ℹ️ Already signed: ${uniqueId}`);
                         }
@@ -1314,6 +1344,13 @@ function animate() {
             timerPaused = true;
             gameEnded = true;
             persistTimerState(timeMsLeft, false);
+            
+            // Play loser sound
+            if (loserSound && loserSound.buffer) {
+                loserSound.stop(); // Stop any currently playing instance
+                loserSound.play();
+            }
+            
             showGameOverOverlay();
         }
         updateHUD();
@@ -1328,6 +1365,16 @@ function animate() {
     if (!officeLabelCreated && glass012Mesh && getSignatureCount() === 3) {
         createPortalLabel(glass012Mesh, 'OFFICE');
         officeLabelCreated = true;
+    }
+    
+    // Show message if all 3 signatures are collected (even if player returns to west)
+    if (!allSignaturesAnnounced && getSignatureCount() === 3) {
+        allSignaturesAnnounced = true;
+        // Only show if we're not currently showing another message
+        const existingMsg = document.getElementById('npc-message');
+        if (!existingMsg) {
+            showMessage('You can now go to the OFFICES');
+        }
     }
 
     // --- 2. RENDER MAIN SCENE ---
